@@ -1,0 +1,31 @@
+*Input_Simulations*: contains SimProp outputs in successive redshift layers stored as .txt files
+-> each line contains a parent nuclei and its children, with a weight so that the redshift and log E_gen distributions are flat
+
+*LoadInput.C*: converts the SimProp .txt file into a merged file for each parent species
+- each line contains children:
+--> from parent "id" at input redshift "z" and rigidity "logRi" and parent weight "wi"
+--> with detected children species ("Z","A"), detected energy "logE" and daughter weight "w" (number of such particles per parent)
+- usage: 
+> root -l
+>> .L LoadInput.C++
+>> LoadInput()
+
+*Intermediate_MergedInput*: contains output of LoadInput.C stored as .dat file as well as as sanity check plot to verify that the redshift and logRi distributions are flat
+
+*ShapeToTensor.py*: converts the .dat file from LoadInput.C for each species into a .npz archive storing the tensor and its axes ("logRi","z" for quantities at emission;"ZA","logE" for quantities at detection)
+- usage:
+> python LoadInput.py
+
+*Output_Tensor*: contains the tensor and its axes stored as .npz 
+--------------------------------------------------------
+Example of data reduction for Carbon 12 (zmax=2.5, logR=17-21):
+SimProp .txt files: 805.9 MB
+Intermediate .date file: 595.7 MB
+Tensor .npz file: 2.8 MB
+---------------------------------------------------------
+
+*VisualizeTensor.ipynb*: interactive visualization of the tensor content
+-> usage:
+> jupyter notebook VisualizeTensor.ipynb
+>> Kernel: restart and run all
+

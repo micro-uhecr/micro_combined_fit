@@ -1,0 +1,9 @@
+astropy
+matplotlib
+numpy
+pandas
+scipy
+iminuit
+jupyterlab
+setuptools
+numba

@@ -40,7 +40,7 @@ if __name__ == "__main__":
     sp.Plot_spectrum(Tensor, E_times_k, ts.A, ts.Z, w_zR, E_th)
     mass.Plot_Xmax(Tensor,E_times_k,ts.A,ts.Z,w_zR,E_th, model = "Sibyll2.3d")
 
-    xmax,exp_distributions = xmax_distr.set_Xmax_distr()
+    '''xmax,exp_distributions = xmax_distr.set_Xmax_distr()
 
     arr_reduced, exp_distribution_reduced = [], []
     dx = 20
@@ -54,6 +54,6 @@ if __name__ == "__main__":
     convoluted_gumbel = xmax_distr.Convolve_all(xmax,A_tot, arr_reduced, model)
 
 
-    draw.Plot_Xmax_distribution(Tensor,E_times_k,ts.A,ts.Z,w_zR,E_th,xmax, model, arr_reduced,exp_distribution_reduced, convoluted_gumbel)
+    draw.Plot_Xmax_distribution(Tensor,E_times_k,ts.A,ts.Z,w_zR,E_th,xmax, model, arr_reduced,exp_distribution_reduced, convoluted_gumbel)'''
 
     plt.show()

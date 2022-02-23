@@ -13,3 +13,4 @@ dependencies:
   - jupyterlab
   - setuptools
   - numba
+  - zstandard

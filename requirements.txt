@@ -7,3 +7,4 @@ iminuit
 jupyterlab
 setuptools
 numba
+zstandard

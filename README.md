@@ -92,11 +92,12 @@ The software depends on standard python packages:
 
 ### just pip
 ```
-> conda create -n combined_fit python=3.9
-> conda activate combined_fit
-> git clone https://gitlab.in2p3.fr/micro/combinedfit.git combined_fit
-> cd combined_fit
+> git clone https://gitlab.in2p3.fr/micro/micro_combined_fit.git
+> cd micro_combined_fit
+> conda env create -f environment.yml
+> conda activate micro_combined_fit
 > pip install -e .
+> ./unpack_data.sh
 ```
 
 ### to build the doc

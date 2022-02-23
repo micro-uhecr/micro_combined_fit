@@ -1,3 +1,3 @@
-#!/bin/env bash
+#!/bin/bash
 unzstd -q -r --rm .
 

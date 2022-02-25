@@ -43,78 +43,45 @@ In addition to that, in the projects many supplementary folders are provided. Th
     
 
 
-## Environment
-The code can be compatible using python 3.
+## Install instructions
+The code is based on python 3, and is meant to be run in its `conda` environment.
+The main dependencies are `matplotlib`, `numpy`, `astropy`, `pandas`, `scipy` and `iminuit`.
 
-
-#### Dependencies 
-The software depends on standard python packages:
-- astropy
-- numpy
-- scipy
-- matplotlib
-- pandas
-
-#### Encountered issues
-- Depending on the python version, the automatic installation of healpy does not work. As healpy is optional, it was removed from the dependencies and healpy can be installed independently if necessary.
-
-- The automatic installation of dependencies is sometimes misbehaving. In such case, you may just install the required packages independently:
-
+### conda default environment
 ```
-> conda install astropy
-> conda install numpy
-> conda install scipy
-> conda install matplotlib
-> conda install pandas
-> conda install numba
-```
-
-## Install instructions (for development)
-
-### conda
-```
-> git clone https://gitlab.in2p3.fr/micro/combinedfit.git combined_fit
-> cd combined_fit
-> conda env create -f environment.yml
-> conda activate combined_fit
-> pip install -e .
-```
-
-### pip requirements first
-```
-> conda create -n combined_fit python=3.9
-> conda activate combined_fit
-> git clone https://gitlab.in2p3.fr/micro/combinedfit.git combined_fit
-> cd combined_fit
-> pip install -r requirements.txt
-> pip install -e .
-```
-
-### just pip
-```
+# clone the project using one of the following options
+## 1. IN2P3 gitlab using ssh key 
+> git clone git@gitlab.in2p3.fr:micro/micro_combined_fit.git
+## 2. IN2P3 gitlab using credentials
 > git clone https://gitlab.in2p3.fr/micro/micro_combined_fit.git
+## 3. github mirror
+> git clone https://github.com/micro-uhecr/micro-combined_fit.git
+
+# create a new conda environment and activate it
 > cd micro_combined_fit
 > conda env create -f environment.yml
 > conda activate micro_combined_fit
+
+# setup current working directory for development
 > pip install -e .
+
+# unpack all data files (compressed with zstd)
 > ./unpack_data.sh
 ```
 
-### to build the doc
-First install sphinx and the ReadTheDocs theme
+### if you wish to build the API documentation
 ```
+# First install sphinx and the ReadTheDocs theme
 > conda install sphinx sphinx_rtd_theme
-```
 
-Build like this
-```
-cd docs
-make html
+# Build like this
+> cd docs
+> make html
 ```
 
 Open the html documentation in `_build/html/index.html`
 
-### to run the tests
+### to run the tests and get the coverage
 Install pytest
 ```
 > conda install pytest pytest-cov
@@ -125,4 +92,15 @@ Run coverage
 ./do_cover.sh
 ```
 
+## Quick start
+- Example of propagation of the injected flux for a certain source model
+  - via the `Fit.py` python script
+  ```
+  > python Example/Fit.py
+  ```
+  - or running the `Propagate.pynb` jupyter notebook 
+  ```
+  > jupyter notebook &
+  ```
+  then open `Notebook/Propagate.ipynb`
 

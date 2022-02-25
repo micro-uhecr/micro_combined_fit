@@ -1,0 +1,10 @@
+# .coveragerc to control coverage.py
+[run]
+omit=
+  *combined_fit/_version.py
+  *combined_fit/version.py
+
+
+[html]
+directory = combined_fit
+

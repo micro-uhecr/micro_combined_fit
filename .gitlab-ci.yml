@@ -1,0 +1,36 @@
+# Basic CI
+image: continuumio/miniconda3
+
+# Change pip's cache directory to be inside the project directory since we can
+# only cache local items.
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+
+before_script:
+  - conda install mamba -n base -c conda-forge
+  - mamba env create -f environment.yml
+  - conda init bash
+  - source ~/.bashrc
+  - conda activate micro_combined_fit
+  - pip install -e .
+  - ./unpack_data.sh
+
+test:
+  script:
+    - mamba install pytest pytest-cov
+    - python -m pytest --cov=./combined_fit --cov-report=html tests
+
+run:
+  script:
+    - python Example/Fit.py
+
+pages:
+  script:
+    - pip install sphinx sphinx-rtd-theme
+    - cd docs ; make html
+    - mv _build/html/ ../public/
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

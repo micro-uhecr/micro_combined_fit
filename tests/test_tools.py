@@ -21,9 +21,10 @@ def test_Tensor():
     t = ts.upload_Tensor()
     assert np.size(t) != 0 #
 
-def test_Xmax_distr():
-    '''
-    check if the tensor is correctly filled
-    '''
-    t, arr = xmax_distr.set_Xmax_distr()
-    assert np.size(t) != 0  #
+# Commented out for now since this is using *private* data
+# def test_Xmax_distr():
+#     '''
+#     check if the tensor is correctly filled
+#     '''
+#     t, arr = xmax_distr.set_Xmax_distr()
+#     assert np.size(t) != 0  #

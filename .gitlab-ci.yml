@@ -26,6 +26,7 @@ run:
 
 pages:
   script:
+    - mamba install make
     - pip install sphinx sphinx-rtd-theme
     - cd docs ; make html
     - mv _build/html/ ../public/

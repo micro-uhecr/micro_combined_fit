@@ -28,5 +28,6 @@ setup(
                       "iminuit",
                       "jupyterlab",
                       "numba",
+                      "zstandard",
                       "setuptools_scm"]
 )

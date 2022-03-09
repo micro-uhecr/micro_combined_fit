@@ -1,10 +1,17 @@
 # combined_fit: A tool to fit simultaneously UHECR data
 Software dedicated to provide a self-consistent modeling framework for fitting simultaneously  energy spectrum, mass composition and arrival direction information 
 
-The main repository is at: https://gitlab.in2p3.fr/micro/micro_combined_fit
-The documentation (to be updated soon) is at: https://micro.pages.in2p3.fr/micro_combined_fit/
+The main repository is at:
+https://gitlab.in2p3.fr/micro/micro_combined_fit
 
-A mirror is proposed at: https://github.com/micro-uhecr/micro_combined_fit
+The documentation (to be updated soon) is at:
+https://micro.pages.in2p3.fr/micro_combined_fit/
+
+A mirror is proposed on github at:
+https://github.com/micro-uhecr/micro_combined_fit
+
+For more information on the MICRO UHECR project read:
+https://micro-uhecr.github.io/
 
 ## Content
 The combined_fit project contains the main code in "combined_fit" folder, including:

@@ -87,7 +87,8 @@ void ExportDistrib(int A, string input_filename_prefix, string output_filename_p
 				file >> Zd >> Ad >> Ed >> wgen;//note wgen is the same for all daughter nuclei
 				if((Ad<=A) and (Ad>=0)){//check to avoid crazy entries
 					vEd.push_back(Ed);
-					vwd.push_back(wgen*dzdt);
+					// vwd.push_back(wgen*dzdt);
+					vwd.push_back(1);
 					vAd.push_back(Ad);
 					vZd.push_back(Zd);
 				}

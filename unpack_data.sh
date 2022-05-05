@@ -20,7 +20,7 @@ zst_files='./Tensor/A_14_z_1.npz.zst
 
 for f in $(echo $zst_files)
 do
-  cmd="unzstd -q --rm  $f"
+  cmd="zstd -d -q --rm  $f"
   echo $cmd
   eval $cmd
 done

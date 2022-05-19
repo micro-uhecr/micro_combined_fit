@@ -165,7 +165,7 @@ def Spectrum_Energy(Z, logR, gamma, logRcut):
         weights in z and R
     '''
     E = Z*np.power(10, logR)
-    Ecut = Z*np.power(10, logRcut)
+    Ecut = Z*np.power(10, float(logRcut))
     ind = np.where(E>Ecut)
     weights = np.zeros_like(logR)
     weights = np.power(E,-gamma+1)*(logR[1]-logR[0])*np.log(10)

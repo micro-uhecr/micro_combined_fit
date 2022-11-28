@@ -196,7 +196,7 @@ def Load_evol_old():
 
     return f_z
 
-def Load_evol(file_sfrd, zmin=2.33e-4, key ="sfrd"):
+def Load_evol(file_sfrd="sfrd_local.dat", zmin=2.33e-4, key ="sfrd"):
 
     file = os.path.join(COMBINED_FIT_BASE_DIR, "../Catalog/" + file_sfrd)
     tz = pd.read_csv(file, delimiter = " ")

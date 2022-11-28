@@ -16,7 +16,8 @@ zst_files='./Tensor/A_14_z_1.npz.zst
 ./Tensor_creation/Input_Simulations/SimProp_12_0.01_0.05_1.txt.zst
 ./Catalog/light_sm_sfr_baryon_od_Resc_Rscreen_merged.dat.zst
 ./Catalog/light_sfr_cleaned_corrected_cloned_LVMHL.dat.zst
-./Catalog/sfrd_local.dat.zst'
+./Catalog/sfrd_local.dat.zst
+./Catalog/smd_local.dat.zst'
 
 for f in $(echo $zst_files)
 do

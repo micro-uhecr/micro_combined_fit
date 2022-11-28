@@ -16,7 +16,7 @@ Z    = [    1,     2,     7,    14,    26]
 
 
 #@nb.jit
-def upload_Tensor():
+def upload_Tensor(logEmin=1):
     '''Function which uploads the tensor
 
     Parameters
@@ -33,14 +33,14 @@ def upload_Tensor():
     Tensor =[]
     for i,a in enumerate(A):
         filename = os.path.join(COMBINED_FIT_BASE_DIR, '../Tensor/A_'+str(A[i])+'_z_'+str(zmax)+'.npz')
-        Tensor.append(CR_Table(filename, zmin, zmax))
+        Tensor.append(CR_Table(filename, zmin, zmax, logEmin=logEmin))
     return Tensor
 
 
 class CR_Table:
     ''' `CR_Table` is a class which allows to deal with the tensor
     '''
-    def __init__(self, filename, zmin, zmax, logEmin=18):
+    def __init__(self, filename, zmin, zmax, logEmin=1, logRmin=1):
         ''' `CR_Table` constructor
 
         Parameters
@@ -58,15 +58,17 @@ class CR_Table:
          '''
         t = np.load(filename)
         #Load variables from npz file
-        self.logRi = t['logRi']
-        self.z = t['z']
-        self.logE = t['logE']
-        self.ZA = t['ZA']
-        weights =  (self.logE>=logEmin)
-        self.tensor = np.zeros_like(t['tensor'])
-        self.tensor[:,:,:,weights] = t['tensor'][:,:,:,weights]
+        ind = find_nearest_Ri_bin(t['logE'], [logEmin,0])[0]+1
+        ind_Ri = np.max((find_nearest_Ri_bin(t['logRi'], [logRmin,0])[0]-1, 0))
 
-		#Define redshift bins for integration
+        self.logRi = t['logRi'][ind_Ri:]
+        self.z = t['z']
+        self.logE = t['logE'][ind:]
+        self.ZA = t['ZA']
+        self.tensor = t['tensor'][:,ind_Ri:,:,ind:]
+
+
+        #Define redshift bins for integration
         bins_z = []
         bins_z.append(zmin)
         for z in self.z:
@@ -90,7 +92,7 @@ class CR_Table:
         self.tensor_stacked_A = np.array(stacked_A)
         self.A = np.array(A_list)
 
-		#Stacked over all Z
+        #Stacked over all Z
         uZ = np.unique(za['Z'])
         Z_list, stacked_Z = [], []
         for z in uZ:
@@ -129,6 +131,22 @@ class CR_Table:
             print("logR or z axis not found")
             return -1
 
+    def sum_logR_Given_z(self, a, bin_z, weights=[]):
+        iz = np.where(np.array(a.shape) == self.z.size)
+        iR = np.where(np.array(a.shape) == self.logRi.size)
+        omega = np.zeros_like(weights)
+        omega[:,bin_z] = weights[:,bin_z]
+
+        if((len(iz[0])==1) and (len(iR[0])==1)):
+            res = 0
+            if(len(omega)>0):
+                res = np.tensordot(a, omega, axes=([iR[0][0],iz[0][0]],[0,1]))
+            else:
+                res = np.sum(a, axis=[iz[0],iR[0]])
+            return res
+        else:
+            print("logR or z axis not found")
+
     def J_E(self, a, w_zR, ZA):
         ''' Create the expected spectrum given the parameters at the source
 
@@ -152,7 +170,14 @@ class CR_Table:
         return stacked_logR_z
 
 
-def Load_evol():
+    def Contract_Ri_Given_z(self, a, w_zR, ZA, bin_z):
+        zz, rr = np.meshgrid(self.z, self.logRi)
+        res = w_zR(ZA, zz, rr)
+        stacked_logR_Given_z = self.sum_logR_Given_z(a, bin_z, w_zR(ZA, zz, rr)*self.delta_z)
+
+        return stacked_logR_Given_z
+
+def Load_evol_old():
     ''' Load the chosen evolution of the source
 
     Parameters
@@ -170,3 +195,67 @@ def Load_evol():
     f_z = interpolate.interp1d( tz['z'], tz['sfrd'])
 
     return f_z
+
+def Load_evol(file_sfrd, zmin=2.33e-4, key ="sfrd"):
+
+    file = os.path.join(COMBINED_FIT_BASE_DIR, "../Catalog/" + file_sfrd)
+    tz = pd.read_csv(file, delimiter = " ")
+    tz[key] *= (1/constant._Mpc_2_km)**2
+
+    if zmin>1e-10:
+        select = np.where(tz['z']<zmin)[0]
+
+        dist_up = tz["z"][select[-1]+1]-zmin
+        dist_down = zmin-tz[key][select[-1]]
+
+        value = (tz[key][select[-1]+1]* dist_down + tz[key][select[-1]]*dist_up)/(dist_up + dist_down)
+        tz[key][select] = 0
+
+        dist = np.append(np.array(tz['z']), zmin)
+        values = np.append(np.array(tz[key]), value)
+
+        dist = np.append(dist, 0)
+        values = np.append(values, 0)
+    else:
+        dist = np.append(np.array(tz['z']), tz['z'][0]-1e-10)
+        values = np.append(np.array(tz[key]), 0)
+        dist = np.append(dist, 0)
+        values = np.append(values, 0)
+
+
+    f_z = interpolate.interp1d( dist, values)
+
+    return f_z
+
+def find_nearest_Ri_bin(array, value):
+    idx = ((value-array[0])/(array[1]-array[0]))//1
+    wrg = np.where(idx<0)[0]
+    idx[wrg] = 0
+    wrg = np.where(idx>=len(array))[0]
+    idx[wrg] = len(array)-2
+    idx = idx.astype(int)
+    return idx
+
+def find_n_given_z(z, zmax = 1, zmin = 0, dzmin = 1E-4, dzmax = 5E-2):
+    '''For a given z retun the number "n" for of Table.z bin'''
+    dz = lambda z: dzmin + dzmax*(z-zmin)/(zmax-zmin)
+    a = 1 + dzmax/(zmax-zmin)
+    b = dzmin - dzmax*zmin/(zmax-zmin)
+    n = (np.log((z - dz(z)/2 + b/(a-1))/(zmin + b/(a-1)))/np.log(a))//1
+    n = n.astype(int)
+    return n
+
+def Return_lnA(t, frac, zmax, bin_z, A, Z, w_zR):
+    #Computation##################################
+    sel_A, fractions = [], []
+
+    for i, a in enumerate(A):
+        je = t[i].Contract_Ri_Given_z(t[i].tensor_stacked_A, w_zR, Z[i], bin_z)/t[i].delta_z[bin_z]
+        fractions.append(frac[i]*je)#/(10**t[i].logE * (t[i].logE[1]-t[i].logE[0]) * np.log(10)))
+        sel_A.append(t[i].A)
+
+    A = np.concatenate(sel_A)
+    frac_tot = np.concatenate(fractions, axis=0)
+    EnergySpectrum = np.sum(frac_tot, axis=1)
+
+    return A, EnergySpectrum

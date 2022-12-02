@@ -66,3 +66,11 @@ annotations = [#ra, dec, name
 				[274.7, -62.3, "Laniakea", "u"],# 0.0112  0.0861
 				[46.3, 40.2, "Perseus-Pisces", "u"]
 				]
+
+# Magentic field
+B_GMF_nG, lc_GMF_Mpc, Lmax_GMF_Mpc = 1E3, 100E-6, 10E-3#1 uG, 0.1 kpc, 10 kpc
+B_LGMF_nG, lc_LGMF_Mpc, Lmax_LGMF_Mpc = 25, 10E-3, 1#25 nG, 10 kpc, 1 Mpc
+B_IGMF_nG, lc_IGMF_Mpc, Lmax_IGMF_Mpc = 1e-4, 1, 1e10
+B_default = [[B_GMF_nG, lc_GMF_Mpc, Lmax_GMF_Mpc],\
+			[B_LGMF_nG, lc_LGMF_Mpc, Lmax_LGMF_Mpc],\
+			[B_IGMF_nG, lc_IGMF_Mpc, Lmax_IGMF_Mpc]]

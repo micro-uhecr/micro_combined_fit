@@ -23,11 +23,13 @@ setup(
     install_requires=["astropy",
                       "matplotlib",
                       "numpy",
-                      "pandas",                      
+                      "pandas",
                       "scipy",
                       "iminuit",
                       "jupyterlab",
                       "numba",
                       "zstandard",
-                      "setuptools_scm"]
+                      "setuptools_scm",
+                      "tqdm",
+                      "healpy"]
 )

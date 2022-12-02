@@ -4,6 +4,8 @@ import numba as nb
 import pandas as pd
 import pathlib
 from scipy import interpolate
+from scipy.sparse import csr_matrix, csc_matrix
+import sparse as sp
 
 from combined_fit import constant
 
@@ -83,14 +85,15 @@ class CR_Table:
         self.tensor_stacked = np.sum(self.tensor, axis=0)
 
         #Stacked over all A
-        uA = np.unique(za['A'])
-        A_list, stacked_A = [], []
-        for a in uA:
+        uA, idx = np.unique(za['A'], return_index=True)
+        A, stacked_A = [], []
+        for a in uA[idx]:
             sel = np.where(za['A'] == a)
             stacked_A.append(np.sum(self.tensor[sel], axis=0))
-            A_list.append(a)
+            A.append(a)
         self.tensor_stacked_A = np.array(stacked_A)
-        self.A = np.array(A_list)
+        self.A = np.array((A))
+
 
         #Stacked over all Z
         uZ = np.unique(za['Z'])
@@ -136,11 +139,13 @@ class CR_Table:
         iR = np.where(np.array(a.shape) == self.logRi.size)
         omega = np.zeros_like(weights)
         omega[:,bin_z] = weights[:,bin_z]
+        omega_csc = sp.COO.from_numpy(omega)
 
         if((len(iz[0])==1) and (len(iR[0])==1)):
             res = 0
             if(len(omega)>0):
-                res = np.tensordot(a, omega, axes=([iR[0][0],iz[0][0]],[0,1]))
+                res = sp.tensordot(sp.COO.from_numpy(a), omega_csc, axes=([iR[0][0],iz[0][0]],[0,1]))
+                res = res.todense()
             else:
                 res = np.sum(a, axis=[iz[0],iR[0]])
             return res
@@ -177,6 +182,7 @@ class CR_Table:
 
         return stacked_logR_Given_z
 
+
 def Load_evol_old():
     ''' Load the chosen evolution of the source
 
@@ -196,9 +202,25 @@ def Load_evol_old():
 
     return f_z
 
-def Load_evol(file_sfrd="sfrd_local.dat", zmin=2.33e-4, key ="sfrd"):
+def Load_evol(file="sfrd_local.dat", zmin=2.33e-4, key ="sfrd"):
+    ''' Load the chosen evolution of the source
 
-    file = os.path.join(COMBINED_FIT_BASE_DIR, "../Catalog/" + file_sfrd)
+    Parameters
+    ----------
+    file : `string`
+        name of the file in the folder Catalog which gives the evolution of sources
+    zmin : `float`
+        minimum distance for the evolution of source
+    key : `string`
+        Name of the column inside the file
+
+    Returns
+    -------
+    f_z : `function`
+        a f
+    '''
+
+    file = os.path.join(COMBINED_FIT_BASE_DIR, "../Catalog/" + file)
     tz = pd.read_csv(file, delimiter = " ")
     tz[key] *= (1/constant._Mpc_2_km)**2
 
@@ -228,6 +250,20 @@ def Load_evol(file_sfrd="sfrd_local.dat", zmin=2.33e-4, key ="sfrd"):
     return f_z
 
 def find_nearest_Ri_bin(array, value):
+    ''' Give the nearest bin in array below the value for linear binning
+
+    Parameters
+    ----------
+    array : `array`
+        array considered
+    value : `float`
+
+    Returns
+    -------
+    idx : `int`
+        The index of the array
+    '''
+
     idx = ((value-array[0])/(array[1]-array[0]))//1
     wrg = np.where(idx<0)[0]
     idx[wrg] = 0
@@ -236,8 +272,28 @@ def find_nearest_Ri_bin(array, value):
     idx = idx.astype(int)
     return idx
 
-def find_n_given_z(z, zmax = 1, zmin = 0, dzmin = 1E-4, dzmax = 5E-2):
-    '''For a given z retun the number "n" for of Table.z bin'''
+def find_n_given_z(z, zmin = 0, zmax = 1, dzmin = 1E-4, dzmax = 5E-2):
+    ''' For a given z retun the nearest bin in the tensor below z
+
+    Parameters
+    ----------
+    z : `float`
+        reshift considered
+    zmin : `float`
+        value choosen in the `zbins` function in the file ShapeToTensor.py
+    zmax : `float`
+        value choosen in the `zbins` function in the file ShapeToTensor.py
+    dzmin : `float`
+        value choosen in the `zbins` function in the file ShapeToTensor.py
+    dzmax : `float`
+        value choosen in the `zbins` function in the file ShapeToTensor.py
+
+    Returns
+    -------
+    n : `int`
+        The index of the reshift vector in the tensor
+    '''
+
     dz = lambda z: dzmin + dzmax*(z-zmin)/(zmax-zmin)
     a = 1 + dzmax/(zmax-zmin)
     b = dzmin - dzmax*zmin/(zmax-zmin)
@@ -245,17 +301,132 @@ def find_n_given_z(z, zmax = 1, zmin = 0, dzmin = 1E-4, dzmax = 5E-2):
     n = n.astype(int)
     return n
 
-def Return_lnA(t, frac, zmax, bin_z, A, Z, w_zR):
-    #Computation##################################
-    sel_A, fractions = [], []
+def Return_lnA(Tensor, E_times_k, bin_z, Z, w_zR):
+    ''' Return the flux EnergySpectrum for a given detected A
 
-    for i, a in enumerate(A):
-        je = t[i].Contract_Ri_Given_z(t[i].tensor_stacked_A, w_zR, Z[i], bin_z)/t[i].delta_z[bin_z]
-        fractions.append(frac[i]*je)#/(10**t[i].logE * (t[i].logE[1]-t[i].logE[0]) * np.log(10)))
-        sel_A.append(t[i].A)
+    Parameters
+    ----------
+    Tensor : `Tensor`
+        tensor
+    E_times_k : `array`
+        array of side len(A)
+    bin_z : `array`
+        bin in reshift of the tensor
+    A : `array`
+        injected mass
+    Z : `array`
+        injected charge
+    w_zR : `function`
+        function that describes the injected spectrum
+
+    Returns
+    -------
+    A : `array`
+        The mass detected
+    EnergySpectrum : `array`
+        The flux detected for each mass A detected
+    '''
+
+    #Computation##################################
+    sel_A, Flux = [], []
+
+    for i in range(len(Z)):
+        je = Tensor[i].Contract_Ri_Given_z(Tensor[i].tensor_stacked_A, w_zR, Z[i], bin_z)/Tensor[i].delta_z[bin_z]
+        Flux.append(E_times_k[i]*je)#/(10**t[i].logE * (t[i].logE[1]-t[i].logE[0]) * np.log(10)))
+        sel_A.append(Tensor[i].A)
 
     A = np.concatenate(sel_A)
-    frac_tot = np.concatenate(fractions, axis=0)
-    EnergySpectrum = np.sum(frac_tot, axis=1)
+    Flux_tot = np.concatenate(Flux, axis=0)
+    EnergySpectrum = np.sum(Flux_tot, axis=1)
 
     return A, EnergySpectrum
+
+def Compute_integrated_Flux(Tensor, E_times_k, Z, w_zR):
+    ''' Compute the total flux above a given energy
+
+    Parameters
+    ----------
+    Tensor : `Tensor`
+        tensor
+    E_times_k : `array`
+        array of side len(A)
+    A : `array`
+        injected mass
+    Z : `array`
+        injected charge
+    w_zR : `function`
+        function that describes the injected spectrum
+
+    Returns
+    -------
+    total_spectrum : `float`
+        Total flux
+    '''
+
+    #Computation##################################
+    models = []
+    for i in range(len(Z)):
+        je = Tensor[i].J_E(Tensor[i].tensor_stacked, w_zR, Z[i])
+        models.append([Tensor[i].logE , E_times_k[i]*je])
+
+    total_spectrum = []
+    logE = []
+    for i, m in enumerate(models):
+        logE, je = m[0], m[1]
+        total_spectrum.append(je)
+    total_spectrum = np.sum(np.array(total_spectrum))
+
+    return total_spectrum
+
+def Return_lnA_Deltat(Tensor, E_times_k, bin_z, Z, w_zR):
+    ''' For a given z retun the nearest bin in
+    the tensor below z in a transient scenario
+
+    Parameters
+    ----------
+    Tensor : `Tensor`
+        tensor
+    E_times_k : `array`
+        array of side len(A)
+    bin_z : `array`
+        bin in reshift of the tensor
+    A : `array`
+        injected mass
+    Z : `array`
+        injected charge
+    w_zR : `function`
+        function that describes the injected spectrum
+
+    Returns
+    -------
+    A : `array`
+        The mass detected
+    EnergySpectrum : `array`
+        The flux detected for each mass A detected
+    '''
+
+    #Computation##################################
+    sel_A, sel_Z, sel_ZA, Flux = [], [], [], []
+
+    for i in range(len(Z)):
+        je = Tensor[i].Contract_Ri_Given_z(Tensor[i].tensor, w_zR, Z[i], bin_z)/Tensor[i].delta_z[bin_z]
+        Flux.append(E_times_k[i]*je)#/(10**t[i].logE * (t[i].logE[1]-t[i].logE[0]) * np.log(10)))
+        sel_ZA.append(Tensor[i].ZA)
+
+    ZA = np.concatenate(sel_ZA)
+    Flux_tot = np.concatenate(Flux, axis=0)
+
+    uZA = np.unique(ZA)
+    ZA_arr, stacked_Flux_tot = [], []
+    for za in uZA:
+        sel = np.where(ZA == za)
+        ZA_arr.append(za)
+        stacked_Flux_tot.append(np.sum(Flux_tot[sel], axis=0))
+
+    stacked_Flux_tot = np.array(stacked_Flux_tot)
+    stacked_ZA = np.array(ZA_arr)
+
+    stacked_ZA = np.transpose([stacked_ZA]*Tensor[0].logE.size)
+
+    return stacked_ZA, stacked_Flux_tot
+

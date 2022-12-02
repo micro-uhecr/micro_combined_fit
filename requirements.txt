@@ -10,3 +10,4 @@ numba
 zstandard
 tqdm
 healpy
+sparse

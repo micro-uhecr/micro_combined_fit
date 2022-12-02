@@ -31,5 +31,6 @@ setup(
                       "zstandard",
                       "setuptools_scm",
                       "tqdm",
-                      "healpy"]
+                      "healpy",
+                      "sparse"]
 )

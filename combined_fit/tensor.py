@@ -139,13 +139,11 @@ class CR_Table:
         iR = np.where(np.array(a.shape) == self.logRi.size)
         omega = np.zeros_like(weights)
         omega[:,bin_z] = weights[:,bin_z]
-        omega_csc = sp.COO.from_numpy(omega)
 
         if((len(iz[0])==1) and (len(iR[0])==1)):
             res = 0
             if(len(omega)>0):
-                res = sp.tensordot(sp.COO.from_numpy(a), omega_csc, axes=([iR[0][0],iz[0][0]],[0,1]))
-                res = res.todense()
+                res = np.tensordot(a, omega, axes=([iR[0][0],iz[0][0]],[0,1]))
             else:
                 res = np.sum(a, axis=[iz[0],iR[0]])
             return res
@@ -328,15 +326,9 @@ def Return_lnA(Tensor, E_times_k, bin_z, Z, w_zR):
     '''
 
     #Computation##################################
-    sel_A, Flux = [], []
-
-    for i in range(len(Z)):
-        je = Tensor[i].Contract_Ri_Given_z(Tensor[i].tensor_stacked_A, w_zR, Z[i], bin_z)/Tensor[i].delta_z[bin_z]
-        Flux.append(E_times_k[i]*je)#/(10**t[i].logE * (t[i].logE[1]-t[i].logE[0]) * np.log(10)))
-        sel_A.append(Tensor[i].A)
-
-    A = np.concatenate(sel_A)
-    Flux_tot = np.concatenate(Flux, axis=0)
+    A = np.concatenate([Tensor[i].A for i in range(len(Z))])
+    je = np.array([Tensor[i].Contract_Ri_Given_z(Tensor[i].tensor_stacked_A, w_zR, Z[i], bin_z)/Tensor[i].delta_z[bin_z] for i in range(len(Z))])
+    Flux_tot = np.concatenate(E_times_k*je, axis=0)
     EnergySpectrum = np.sum(Flux_tot, axis=1)
 
     return A, EnergySpectrum
@@ -408,13 +400,19 @@ def Return_lnA_Deltat(Tensor, E_times_k, bin_z, Z, w_zR):
     #Computation##################################
     sel_A, sel_Z, sel_ZA, Flux = [], [], [], []
 
-    for i in range(len(Z)):
+    #Computation##################################
+    ZA = np.concatenate([Tensor[i].ZA for i in range(len(Z))])
+    je = np.array([Tensor[i].Contract_Ri_Given_z(Tensor[i].tensor_stacked_A, w_zR, Z[i], bin_z)/Tensor[i].delta_z[bin_z] for i in range(len(Z))])
+    Flux_tot = np.concatenate(E_times_k*je, axis=0)
+#    EnergySpectrum = np.sum(Flux_tot, axis=1)
+
+    for i in range(len(Z)):#TBD Check what I've done above in Return_lnA
         je = Tensor[i].Contract_Ri_Given_z(Tensor[i].tensor, w_zR, Z[i], bin_z)/Tensor[i].delta_z[bin_z]
         Flux.append(E_times_k[i]*je)#/(10**t[i].logE * (t[i].logE[1]-t[i].logE[0]) * np.log(10)))
         sel_ZA.append(Tensor[i].ZA)
 
-    ZA = np.concatenate(sel_ZA)
-    Flux_tot = np.concatenate(Flux, axis=0)
+#    ZA = np.concatenate(sel_ZA)
+#    Flux_tot = np.concatenate(Flux, axis=0)
 
     uZA = np.unique(ZA)
     ZA_arr, stacked_Flux_tot = [], []

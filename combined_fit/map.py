@@ -9,9 +9,10 @@ import healpy as hp
 import matplotlib.pyplot as plt
 import os
 import pathlib
-
+import pandas as pd
 from scipy.sparse import csr_matrix, csc_matrix
 import sparse as sp
+from tqdm import tqdm
 
 # This gives the combined_fit/combined_fit directory
 COMBINED_FIT_BASE_DIR = pathlib.Path(__file__).parent.resolve()
@@ -276,7 +277,6 @@ def match_Gal_Deltat(res, Delta_t, k, tracer, dist, bin_dist, bin_logE, zmax):
 
 	rig_order, rig_order_idx = np.unique(rigidity, return_index=True)
 
-
 	Delta_Deltat = np.array([Delta_t(constant._fDL_z(dist),rig_order[::-1][i])-Delta_t(constant._fDL_z(dist),np.append(100,rig_order[::-1])[0:-1][i]) for i in range(len(rig_order))])
 
 	lambd = k*tracer*Delta_Deltat
@@ -294,7 +294,7 @@ def match_Gal_Deltat(res, Delta_t, k, tracer, dist, bin_dist, bin_logE, zmax):
 
 	time_var = time.time()
 
-	for j in (range(len(idx))):
+	for j in (range(len(idx))):#TBD: this loop can be removed, it's just a mattter of numpy index, e.g. lambda_v[:,ind_lambda] = lambda_Values[:,:]? - Using panda dataframe may help as well
 		for i in range(len(rig_order)):
 			lambda_v[j][ind_lambda[i]] = lambda_Values[j][i]
 
@@ -356,23 +356,38 @@ def match_Gal_Deltat_v2(res, Delta_t, k, tracer, dist, bin_dist, bin_logE, zmax)
 
 	# Compute the time Delta tau for each rigidity and for each source
 	# This step take ~50s to run using full dataset
-	Delta_Deltat = np.array([Delta_t(constant._fDL_z(dist),rig_order[::-1][i]) - Delta_t(constant._fDL_z(dist),np.append(100,rig_order[::-1])[0:-1][i]) for i in range(len(rig_order))])
+	start = time.time()
+	# Delta_Deltat = np.transpose(tau_propa_custom_yr_v2(dist, constant.B_default, rig_order[::-1]) - tau_propa_custom_yr_v2(dist, constant.B_default, np.append(100,rig_order[::-1])[0:-1]))
+	Delta_Deltat = np.array([tau_propa_custom_yr(dist,  constant.B_default, rig_order[::-1][i])-tau_propa_custom_yr(dist,  constant.B_default,np.append(100,rig_order[::-1])[0:-1][i]) for i in range(len(rig_order))])
+	print("First time",time.time() - start, "s")
+
+
 
 	# Compute Poisson parameter and drawn at random for each galaxy and each rigidity (quick)
 	lambd = k*tracer*Delta_Deltat
 	random = np.zeros_like(lambd)
-	ind_poisson = np.where(lambd <=1000)
-	ind_gaussian = np.where(lambd >1000)
+	ind_poisson = lambd <=1000
+	ind_gaussian = lambd >1000
 	random[ind_poisson] = np.random.poisson(lambd[ind_poisson])
 	random[ind_gaussian] = np.random.normal(lambd[ind_gaussian], np.sqrt(lambd[ind_gaussian]))
 
 	# This step takes ~30s using full dataset
-	lambda_Values= np.cumsum(random, axis=0) / (k*tracer*np.array([Delta_t(constant._fDL_z(dist),rig_order[::-1][i]) for i in range(len(rig_order))]))
+	start = time.time()
+	# lambda_Values= np.cumsum(random, axis=0)
+	# trac = np.transpose([tracer]*len(rig_order))
+	# test = (k*trac*tau_propa_custom_yr_v2(dist, constant.B_default ,rig_order[::-1])).T
+	# print(np.shape(lambda_Values))
+	# print(np.shape(test))
+	# lambda_Values = lambda_Values / test
+
+	lambda_Values= np.cumsum(random, axis=0) / (k*tracer*np.array([tau_propa_custom_yr(dist, constant.B_default, rig_order[::-1][i]) for i in range(len(rig_order))]))
 	lambda_Values = np.transpose(lambda_Values)
+	print("Second time",time.time() - start, "s")
 
 	#lambda_v= np.zeros_like(res[idx, 1, :, :])
 	# Associate to each of the rig_order an array of idx correspondig in rigidity
 	ind_lambda = [np.where(rigidity==rig_order[::-1][i]) for i in range(len(rig_order))]
+	print("shape ind_lambda ", np.shape(ind_lambda))
 
 
 	time_var = time.time()
@@ -380,28 +395,28 @@ def match_Gal_Deltat_v2(res, Delta_t, k, tracer, dist, bin_dist, bin_logE, zmax)
 	coords = []
 	value = []
 
-	for j in (range(len(idx))):
-		for i in range(len(rig_order)):
-			if lambda_Values[j][i] > 0:
-				for k in range(len(ind_lambda[i][0])):
-					if res[idx[j], 1, ind_lambda[i][0][k], ind_lambda[i][1][k]] > 0:
+	ind = np.transpose(np.where(lambda_Values>0))
 
-						#Store the coordinates with non zeros values
-						coords.append([j, ind_lambda[i][0][k], ind_lambda[i][1][k]])
 
-						#The flux of each galaxy is multiply by the lambda value
-						value.append(lambda_Values[j][i] * res[idx[j], 1, ind_lambda[i][0][k], ind_lambda[i][1][k]])
+	for j, gal in (enumerate(ind)): #Loop over all galaxies and non zero rigidity
+		print(gal)
+		for k in range(len(ind_lambda[gal[1]][0])): #Loop over each rigidity
 
-	# Create sparse matrix
+			if res[idx[gal[0]], 1, ind_lambda[gal[1]][0][k], ind_lambda[gal[1]][1][k]] > 0:
+
+				#Store the coordinates with non zeros values
+				coords.append([gal[0], ind_lambda[gal[1]][0][k], ind_lambda[gal[1]][1][k]])
+
+				#The flux of each galaxy is multiply by the lambda value
+				value.append(lambda_Values[gal[0], gal[1]] * res[idx[gal[0]], 1, ind_lambda[gal[1]][0][k], ind_lambda[gal[1]][1][k]])
+
+
 	lambda_v = sp.COO(np.transpose(coords), value, shape=np.shape(res[idx, 1, :, :]))
-
-
-	print(np.shape(lambda_v.todense()))
 
 	# Sum for all energies and convert it into a normal numpy array
 	result_test = lambda_v.sum(axis=2).todense()
 
-	print(np.shape(result_test))
+
 	print("Time taken = ", time.time() - time_var ,"s    |    Size = ", lambda_v.nbytes/((1024)**2) , "mB")
 
 	# Shape the result in order to match
@@ -637,8 +652,11 @@ def LoadShapedData(galCoord, Dist, Cn, tracer, l, b):
 	#Coordinate conversion
 	phiData, thetaData = MapToHealpyCoord(galCoord, np.radians(l), np.radians(b))
 
-	dataset = np.asarray([thetaData, phiData, Dist, Cn, tracer])
-	return dataset
+	# dataset = np.asarray([thetaData, phiData, Dist, Cn, tracer])
+	dataset = {'Theta': thetaData, 'Phi': phiData, 'Dist':  Dist, 'Cn': Cn, 'Tracer':  tracer }
+	dataset_panda = pd.DataFrame(data=dataset)
+
+	return dataset_panda
 
 def LoadlnAMap(dataset, nside, Mass_flux):
 	''' Produce a array that can be plot using HealPy
@@ -658,16 +676,41 @@ def LoadlnAMap(dataset, nside, Mass_flux):
 	'''
 
 	# Pixel Not_Zero_exposureex for each events of coordinates (theta, phi)
-	Galaxies = hp.ang2pix(nside, dataset[0], dataset[1])
+	Galaxies = hp.ang2pix(nside, dataset['Theta'].to_numpy(), dataset['Phi'].to_numpy())
+	dataset['Pixel'] = Galaxies
 
 	# Count map of parameter nside
 	npix = hp.nside2npix(nside)# npix corresponds to the number of pixel associated to a NSIDE healpy map
+	size_reshape = list(np.shape(Mass_flux)[1:])+[1]
+	fact = np.tile(dataset['Tracer']/(dataset['Dist']**2 * dataset['Cn']), tuple(size_reshape)).T.astype('float64')
+	fact *= Mass_flux.astype('float64')
+
+	# lnA_map = np.histogram([Galaxies]*91, bins=np.arange(npix+1), weights = fact.T)[0]
+	# print(np.shape(lnA_map))
+	# Flux = pd.DataFrame(fact)
+	#
+	# print(Flux)
+	# print(dataset)
+	# Merged_Galaxies = dataset.merge(Flux, left_index=True, right_index=True)
+	# Merged_Galaxies = Merged_Galaxies.groupby(['Pixel']).sum()
+	#
+	# print(Merged_Galaxies)
+	# print(npix)
+
+	# print(np.shape(fact))
+	# for  i in range(len(np.shape(fact)[0])):
+	# 	dataset['Flux_' + str(i)] = fact[0]
+	#
+	# print(Merged_Galaxies.iloc[:,5:])
+	# print(Merged_Galaxies.iloc[:,0])
+	# print(Merged_Galaxies.iloc['Pixel'].to_numpy())
 
 	lnA_map = np.zeros((npix, np.size(Mass_flux[0])))
+	# lnA_map[Merged_Galaxies.iloc[:,0].to_numpy()] = Merged_Galaxies.iloc[:,5:].to_numpy()
+	for i in range(len(Galaxies)):#TBD: SPEED UP BY USING PANDAS GROUPBY: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.groupby.html
+		lnA_map[Galaxies[i]] = lnA_map[Galaxies[i]] + fact[i]#Mass_flux[i]*fact[i]
 
-	for i in range(len(Galaxies)):
-		lnA_map[Galaxies[i]] = lnA_map[Galaxies[i]] + Mass_flux[i]/(dataset[2][i]**2*dataset[3][i])*dataset[4][i]
-
+	print(np.shape(lnA_map))
 	return lnA_map
 
 def LoadIsolnAMap(nside, iso_result, iso_bin_z, lnA_map, alpha_fact, f_z):
@@ -787,28 +830,57 @@ def LoadSmoothedMap(hp_map, radius_deg, nside, smoothing="fisher"):
 
 
 
-def tau_propa_custom_yr(D, B, logR):
+def tau_propa_custom_yr(D, B, logR):#TBD MODIFY SO THAT IT CAN INGEST D and R with DIFFERENT SIZES
 	'''Propagation-induced delay in yr'''
 	'''Based on Eq. 5 in Stanev 2008 arXiv:0810.2501 assuming delay = spread'''
 	if np.isscalar(D):
 		tau2=0
+		for MF in B:
+			B_nG, lc_Mpc, Lmax_Mpc = MF[0], MF[1], MF[2]
+			tau_max = 4.4E5 * B_nG**2 *  lc_Mpc * (Lmax_Mpc/100)**2
+			if(D<Lmax_Mpc):
+				tau_max = (D/Lmax_Mpc)**2
+			tau2+=tau_max*tau_max
 	else:
 		tau2 = np.zeros_like(D)
+		for MF in B:
+			B_nG, lc_Mpc, Lmax_Mpc = MF[0], MF[1], MF[2]
+			factor = 4.4E5 * B_nG**2 *  lc_Mpc * (Lmax_Mpc/100)**2
+			tau_max = factor * np.ones_like(D)
+			ind_below = D<Lmax_Mpc
+			tau_max[ind_below] = tau_max[ind_below]*(D[ind_below]/Lmax_Mpc)**2
+			tau2+=tau_max*tau_max
 
+	return np.sqrt(tau2) * (10**(logR-18)/100)**(-2) #yr #TBD: modify here
+
+def tau_propa_custom_yr_v2(D, B, logR):#TBD MODIFY SO THAT IT CAN INGEST D and R with DIFFERENT SIZES
+	'''Propagation-induced delay in yr'''
+	'''Based on Eq. 5 in Stanev 2008 arXiv:0810.2501 assuming delay = spread'''
+
+	tau2 = np.zeros((len(D),len(logR)))*0.
+	dist  = np.array([D] * len(logR)).T
 	for MF in B:
 		B_nG, lc_Mpc, Lmax_Mpc = MF[0], MF[1], MF[2]
-		tau_max = np.zeros_like(D)
-		if np.isscalar(D):
-			if(D<Lmax_Mpc):
-				tau_max = 4.4E5 * B_nG**2 * (D/100)**2 * lc_Mpc * (10**(logR-18)/100)**(-2) #yr
-			else:
-				tau_max = 4.4E5 * B_nG**2 * (Lmax_Mpc/100)**2 * lc_Mpc * (10**(logR-18)/100)**(-2) #yr
-			tau2+=tau_max*tau_max
-		else:
-			ind_below = np.where(D<Lmax_Mpc)
-			ind_above = np.where(D>=Lmax_Mpc)
-			tau_max[ind_below] = 4.4E5 * B_nG**2 * (D[ind_below]/100)**2 * lc_Mpc * (10**(logR-18)/100)**(-2) #yr
-			tau_max[ind_above] = 4.4E5 * B_nG**2 * (Lmax_Mpc/100)**2 * lc_Mpc * (10**(logR-18)/100)**(-2) #yr
-			tau2+=tau_max*tau_max
+		factor = 4.4E5 * B_nG**2 *  lc_Mpc * (Lmax_Mpc/100)**2
+		tau_max = factor * np.ones((len(D),len(logR)))
+		ind_below = np.where(dist<Lmax_Mpc)
+		tau_max[ind_below] = tau_max[ind_below]*(dist[ind_below]/Lmax_Mpc)**2
+		tau2+=tau_max*tau_max
 
-	return np.sqrt(tau2)
+	return np.sqrt(tau2) * (10**(logR-18)/100)**(-2) #yr #TBD: modify here
+
+def tau_propa_custom_yr_v3(D, B, logR):#TBD MODIFY SO THAT IT CAN INGEST D and R with DIFFERENT SIZES
+	'''Propagation-induced delay in yr'''
+	'''Based on Eq. 5 in Stanev 2008 arXiv:0810.2501 assuming delay = spread'''
+
+	tau2 = np.zeros((len(D)))*0.
+	dist  = D
+	for MF in B:
+		B_nG, lc_Mpc, Lmax_Mpc = MF[0], MF[1], MF[2]
+		factor = 4.4E5 * B_nG**2 *  lc_Mpc * (Lmax_Mpc/100)**2
+		tau_max = factor * np.ones((len(D)))
+		ind_below = np.where(dist<Lmax_Mpc)
+		tau_max[ind_below] = tau_max[ind_below]*(dist[ind_below]/Lmax_Mpc)**2
+		tau2+=tau_max*tau_max
+
+	return np.sqrt(tau2) * (10**(logR-18)/100)**(-2) #yr #TBD: modify here

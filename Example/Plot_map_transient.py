@@ -63,7 +63,7 @@ if __name__ == "__main__":
 	# Convert emissivities to E_times_k
 	S_z = lambda z : 1/dzdt(z)*f_z(z)
 	dtdz = lambda z: 1/dzdt(z)
-	Delta_t = lambda z, logR: map.tau_propa_custom_yr(constant._fz_DL(z), constant.B_default, logR)
+	Delta_t = lambda z, logR: map.tau_propa_custom_yr(constant._fz_DL(z), constant.B_default, logR)#TBD: Do not call Delta_t here, rather use appropriate function right away in the map.py
 
 	norm = integrate.quad(S_z, 0, 2.5)[0]/ integrate.quad(dtdz, 0, 2.5)[0] / (1/constant._Mpc_2_km)**2
 	E_times_k = np.array(L/norm)
@@ -125,7 +125,7 @@ if __name__ == "__main__":
 	w_zR_Background = lambda ZA, z, logR: w_R(ZA, logR)/dzdt(z)*f_z(z)
 
 	# Load catalogue of galaxies
-	dist, l, b, Cn, tracer = map.load_Catalog(galCoord, Dmin=1., Dmax=dist_cut, tracer=trac, fluxmin=0.0001) # logSFR can be changed to logM*
+	dist, l, b, Cn, tracer = map.load_Catalog(galCoord, Dmin=0., Dmax=dist_cut, tracer=trac, fluxmin=0.0001) # logSFR can be changed to logM*
 
 	# Compute the flux for each bin in redshift
 	res =  np.array([ts.Return_lnA_Deltat(Tensor, E_times_k, i, Z, w_zR_Gal) for i in tqdm(range(len(bin_z)))])

@@ -116,6 +116,7 @@ if __name__ == "__main__":
 
 	# Injected spectrum galaxies
 	w_R = lambda ZA, logR: sp.Spectrum_Energy(ZA, logR, gamma, logRcut, logEmin=logEmin_CF)
+
 	w_zR_Gal = lambda ZA, z, logR: w_R(ZA, logR)
 
 	# Injected spectrum isotropic background (D>dist_cut)
@@ -126,6 +127,7 @@ if __name__ == "__main__":
 
 	# Compute the flux for each bin in redshift
 	res =  np.array([ts.Return_lnA(Tensor, E_times_k, i, Z, w_zR_Gal) for i in tqdm(range(len(bin_z)))])
+	print(np.shape(res))
 
 	# Associate the flux (res) to each galaxy (Flux: result[Glaxy_Number,1] for a detected nuclei result[Glaxy_Number,0])
 	result = map.match_Gal(res, dist, bin_dist, zmax)
@@ -150,7 +152,9 @@ if __name__ == "__main__":
 	data = map.LoadShapedData(galCoord, dist*constant._Mpc_2_km, Cn, tracer, l, b)
 
 	# Compute one map per detected nucleus for the foreground
+	time_tst = time.time()
 	lnA_map = np.transpose(map.LoadlnAMap(data, nside, result[:,1]))/constant._c
+	print(time.time()-time_tst, "s")
 
 	# Get one map per detected nucleus for the isotropic background
 	iso_lnA_map = map.LoadIsolnAMap(nside, iso_result, iso_bin_z, lnA_map, alpha_fact, S_z)

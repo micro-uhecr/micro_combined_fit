@@ -11,7 +11,7 @@ import os
 import pathlib
 import pandas as pd
 from scipy.sparse import csr_matrix, csc_matrix
-import sparse as sp
+import sparse
 from tqdm import tqdm
 
 # This gives the combined_fit/combined_fit directory
@@ -237,6 +237,7 @@ def match_Gal(result, dist, bin_dist, zmax):
 	return res
 
 
+
 def match_Gal_Deltat(res, Delta_t, k, tracer, dist, bin_dist, bin_logE, zmax):
 	''' Associate each galaxy with a flux in a transient scenario
 
@@ -259,174 +260,96 @@ def match_Gal_Deltat(res, Delta_t, k, tracer, dist, bin_dist, bin_logE, zmax):
 
 	Returns
 	-------
-	result_final : `numpy array`
+	Shaped_Final_Result : `numpy array`
 		The flux of each galaxy in the same format as res
 	'''
 
-	start_time = time.time()
-
+	# Find idx to associate to each galaxy
 	idx = ts.find_n_given_z(constant._fDL_z(dist), zmax=zmax)
-	ind_of_idx = np.where(idx == -1)
-	idx[ind_of_idx] =0
-	weights = np.array([dist-bin_dist[idx], bin_dist[idx+1]-dist])
-	den = np.sum(weights, axis=0)
-
-	mass = np.array([x[1] for x in res[0,0]])[:,0]
-	rigidity = [bin_logE]*np.size(mass)
-	rigidity = np.transpose(np.transpose(rigidity)-np.log10(mass))
-
-	rig_order, rig_order_idx = np.unique(rigidity, return_index=True)
-
-	Delta_Deltat = np.array([Delta_t(constant._fDL_z(dist),rig_order[::-1][i])-Delta_t(constant._fDL_z(dist),np.append(100,rig_order[::-1])[0:-1][i]) for i in range(len(rig_order))])
-
-	lambd = k*tracer*Delta_Deltat
-	random = np.zeros_like(lambd)
-	ind_poisson = np.where(lambd <=1000)
-	ind_gaussian = np.where(lambd >1000)
-	random[ind_poisson] = np.random.poisson(lambd[ind_poisson])
-	random[ind_gaussian] = np.random.normal(lambd[ind_gaussian], np.sqrt(lambd[ind_gaussian]))
-
-	lambda_Values= np.cumsum(random, axis=0) / (k*tracer*np.array([Delta_t(constant._fDL_z(dist),rig_order[::-1][i]) for i in range(len(rig_order))]))
-	lambda_Values = np.transpose(lambda_Values)
-
-	lambda_v= np.zeros_like(res[idx, 1, :, :])
-	ind_lambda = [np.where(rigidity==rig_order[::-1][i]) for i in range(len(rig_order))]
-
-	time_var = time.time()
-
-	for j in (range(len(idx))):#TBD: this loop can be removed, it's just a mattter of numpy index, e.g. lambda_v[:,ind_lambda] = lambda_Values[:,:]? - Using panda dataframe may help as well
-		for i in range(len(rig_order)):
-			lambda_v[j][ind_lambda[i]] = lambda_Values[j][i]
-
-
-	result_test = np.multiply(lambda_v, res[idx, 1, :, :])
-	result_test = np.sum(result_test, axis=2)
-
-	print("Time taken = ", time.time() - time_var ,"s    | Size = ", (lambda_v.nbytes+res[idx, 1, :, :].nbytes)/((1024)**2) , "mb")
-
-	result_final = result_test[:, :, None]
-	test = np.array([res[0, 0, :, 0][:, None]]*len(idx))
-
-	result_final= np.append(test, result_final, axis=2)
-	result_final = np.array(np.swapaxes(result_final, 1,2))
-
-
-	return result_final
-
-
-def match_Gal_Deltat_v2(res, Delta_t, k, tracer, dist, bin_dist, bin_logE, zmax):
-	''' Associate each galaxy with a flux in a transient scenario
-
-	Parameters
-	----------
-	res : `numpy array`
-		Numpy array return by Return_lnA
-	Delta_t : `function`
-		Function to compute Delta_t
-	k : `float`
-		parameter k
-	dist : `numpy array`
-		array of len `number of galaxy` with the distance of each galaxy in Mpc
-	bin_dist : `numpy array`
-		array in distance of the tensor (converted from redshift to luminosity distance)
-	bin_logE : `numpy array`
-		array in logE of the tensor	(detected energy)
-	zmax : `float`
-		maximum distance of the tensor
-
-	Returns
-	-------
-	result_final : `numpy array`
-		The flux of each galaxy in the same format as res
-	'''
-
-	idx = ts.find_n_given_z(constant._fDL_z(dist), zmax=zmax)
-	ind_of_idx = np.where(idx == -1)
-	idx[ind_of_idx] =0
-	weights = np.array([dist-bin_dist[idx], bin_dist[idx+1]-dist])
-	den = np.sum(weights, axis=0)
 
 	# Compute the rigidity for all detected energy and detected charge
 	mass = np.array([x[1] for x in res[0,0]])[:,0]
-	rigidity = [bin_logE]*np.size(mass)
+	energy = [bin_logE]*np.size(mass)
 
 	# Flatten and regroup them in order to compute once and for all
-	rigidity = np.transpose(np.transpose(rigidity)-np.log10(mass))
+	rigidity = np.transpose(np.transpose(energy)-np.log10(mass))
 	rig_order, rig_order_idx = np.unique(rigidity, return_index=True)
 
+
 	# Compute the time Delta tau for each rigidity and for each source
-	# This step take ~50s to run using full dataset
 	start = time.time()
 	# Delta_Deltat = np.transpose(tau_propa_custom_yr_v2(dist, constant.B_default, rig_order[::-1]) - tau_propa_custom_yr_v2(dist, constant.B_default, np.append(100,rig_order[::-1])[0:-1]))
-	Delta_Deltat = np.array([tau_propa_custom_yr(dist,  constant.B_default, rig_order[::-1][i])-tau_propa_custom_yr(dist,  constant.B_default,np.append(100,rig_order[::-1])[0:-1][i]) for i in range(len(rig_order))])
+	Delta_Deltat = np.array([tau_propa_custom_yr(dist,  constant.B_default, rig_order[::-1][i]) - tau_propa_custom_yr(dist,  constant.B_default,np.append(100,rig_order[::-1])[0:-1][i]) for i in range(len(rig_order))])
 	print("First time",time.time() - start, "s")
 
 
 
 	# Compute Poisson parameter and drawn at random for each galaxy and each rigidity (quick)
 	lambd = k*tracer*Delta_Deltat
-	random = np.zeros_like(lambd)
+	Nburst_drawn = np.zeros_like(lambd)
 	ind_poisson = lambd <=1000
 	ind_gaussian = lambd >1000
-	random[ind_poisson] = np.random.poisson(lambd[ind_poisson])
-	random[ind_gaussian] = np.random.normal(lambd[ind_gaussian], np.sqrt(lambd[ind_gaussian]))
+	Nburst_drawn[ind_poisson] = np.random.poisson(lambd[ind_poisson])
+	Nburst_drawn[ind_gaussian] = np.random.normal(lambd[ind_gaussian], np.sqrt(lambd[ind_gaussian]))
 
 	# This step takes ~30s using full dataset
 	start = time.time()
-	# lambda_Values= np.cumsum(random, axis=0)
+	# Cum_Number_Bursts= np.cumsum(Nburst_drawn, axis=0)
 	# trac = np.transpose([tracer]*len(rig_order))
 	# test = (k*trac*tau_propa_custom_yr_v2(dist, constant.B_default ,rig_order[::-1])).T
-	# print(np.shape(lambda_Values))
+	# print(np.shape(Cum_Number_Bursts))
 	# print(np.shape(test))
-	# lambda_Values = lambda_Values / test
+	# Cum_Number_Bursts = Cum_Number_Bursts / test
 
-	lambda_Values= np.cumsum(random, axis=0) / (k*tracer*np.array([tau_propa_custom_yr(dist, constant.B_default, rig_order[::-1][i]) for i in range(len(rig_order))]))
-	lambda_Values = np.transpose(lambda_Values)
+	Cum_Number_Bursts = np.cumsum(Nburst_drawn, axis=0) / (k*tracer*np.array([tau_propa_custom_yr(dist, constant.B_default, rig_order[::-1][i]) for i in range(len(rig_order))]))
+	Cum_Number_Bursts = np.transpose(Cum_Number_Bursts)
 	print("Second time",time.time() - start, "s")
 
-	#lambda_v= np.zeros_like(res[idx, 1, :, :])
+	#Flux_matrix= np.zeros_like(res[idx, 1, :, :])
 	# Associate to each of the rig_order an array of idx correspondig in rigidity
 	ind_lambda = [np.where(rigidity==rig_order[::-1][i]) for i in range(len(rig_order))]
-	print("shape ind_lambda ", np.shape(ind_lambda))
-
 
 	time_var = time.time()
 
 	coords = []
 	value = []
 
-	ind = np.transpose(np.where(lambda_Values>0))
+	ind = np.transpose(np.where(Cum_Number_Bursts>0))
 
 
 	for j, gal in (enumerate(ind)): #Loop over all galaxies and non zero rigidity
-		print(gal)
-		for k in range(len(ind_lambda[gal[1]][0])): #Loop over each rigidity
 
-			if res[idx[gal[0]], 1, ind_lambda[gal[1]][0][k], ind_lambda[gal[1]][1][k]] > 0:
+		# Since one rigidity can correspond to multiply E/Z combinaisation. A loop is done over all E/Z that are equal to the rigidity computed
+		for k in range(len(ind_lambda[gal[1]][0])):
+			bin_redshift = idx[gal[0]]
+			bin_mass_detected = ind_lambda[gal[1]][0][k]
+			bin_energy_detected = ind_lambda[gal[1]][1][k]
+			Flux = res[bin_redshift, 1, bin_mass_detected, bin_energy_detected]
 
+			if Flux > 0:
 				#Store the coordinates with non zeros values
-				coords.append([gal[0], ind_lambda[gal[1]][0][k], ind_lambda[gal[1]][1][k]])
+				coords.append([gal[0], bin_mass_detected, bin_energy_detected])
 
-				#The flux of each galaxy is multiply by the lambda value
-				value.append(lambda_Values[gal[0], gal[1]] * res[idx[gal[0]], 1, ind_lambda[gal[1]][0][k], ind_lambda[gal[1]][1][k]])
+				#The flux of each galaxy is multiply by the number of bursts
+				value.append(Cum_Number_Bursts[gal[0], gal[1]] * Flux)
 
-
-	lambda_v = sp.COO(np.transpose(coords), value, shape=np.shape(res[idx, 1, :, :]))
+	# Store it in a sparce matrix
+	Flux_matrix = sparse.COO(np.transpose(coords), value, shape=np.shape(res[idx, 1, :, :]))
 
 	# Sum for all energies and convert it into a normal numpy array
-	result_test = lambda_v.sum(axis=2).todense()
+	Flux_Matrix_Sum_Energy = Flux_matrix.sum(axis=2).todense()
 
 
-	print("Time taken = ", time.time() - time_var ,"s    |    Size = ", lambda_v.nbytes/((1024)**2) , "mB")
+	print("Time taken = ", time.time() - time_var ,"s    |    Size = ", Flux_matrix.nbytes/((1024)**2) , "mB")
 
 	# Shape the result in order to match
-	result_final = result_test[:, :, None]
-	test = np.array([res[0, 0, :, 0][:, None]]*len(idx))
-	result_final= np.append(test, result_final, axis=2)
-	result_final = np.array(np.swapaxes(result_final, 1,2))
+	Shaped_Final_Result = Flux_Matrix_Sum_Energy[:, :, None]
+	Mass_detected = np.array([res[0, 0, :, 0][:, None]]*len(idx))
+	Shaped_Final_Result= np.append(Mass_detected, Shaped_Final_Result, axis=2)
+	Shaped_Final_Result = np.array(np.swapaxes(Shaped_Final_Result, 1,2))
 
 
-	return result_final
+	return Shaped_Final_Result
 
 def load_Catalog(galCoord=True, Dmin=1, Dmax=350, tracer="logSFR", fluxmin=0):
 	''' Associate each galaxy with a flux
@@ -830,7 +753,7 @@ def LoadSmoothedMap(hp_map, radius_deg, nside, smoothing="fisher"):
 
 
 
-def tau_propa_custom_yr(D, B, logR):#TBD MODIFY SO THAT IT CAN INGEST D and R with DIFFERENT SIZES
+def tau_propa_custom_yr(D, B, logR):  # TBD The v2 version can ingest D and R with different sizes
 	'''Propagation-induced delay in yr'''
 	'''Based on Eq. 5 in Stanev 2008 arXiv:0810.2501 assuming delay = spread'''
 	if np.isscalar(D):
@@ -851,9 +774,9 @@ def tau_propa_custom_yr(D, B, logR):#TBD MODIFY SO THAT IT CAN INGEST D and R wi
 			tau_max[ind_below] = tau_max[ind_below]*(D[ind_below]/Lmax_Mpc)**2
 			tau2+=tau_max*tau_max
 
-	return np.sqrt(tau2) * (10**(logR-18)/100)**(-2) #yr #TBD: modify here
+	return np.sqrt(tau2) * (10**(logR-18)/100)**(-2) #yr
 
-def tau_propa_custom_yr_v2(D, B, logR):#TBD MODIFY SO THAT IT CAN INGEST D and R with DIFFERENT SIZES
+def tau_propa_custom_yr_v2(D, B, logR):
 	'''Propagation-induced delay in yr'''
 	'''Based on Eq. 5 in Stanev 2008 arXiv:0810.2501 assuming delay = spread'''
 
@@ -867,20 +790,4 @@ def tau_propa_custom_yr_v2(D, B, logR):#TBD MODIFY SO THAT IT CAN INGEST D and R
 		tau_max[ind_below] = tau_max[ind_below]*(dist[ind_below]/Lmax_Mpc)**2
 		tau2+=tau_max*tau_max
 
-	return np.sqrt(tau2) * (10**(logR-18)/100)**(-2) #yr #TBD: modify here
-
-def tau_propa_custom_yr_v3(D, B, logR):#TBD MODIFY SO THAT IT CAN INGEST D and R with DIFFERENT SIZES
-	'''Propagation-induced delay in yr'''
-	'''Based on Eq. 5 in Stanev 2008 arXiv:0810.2501 assuming delay = spread'''
-
-	tau2 = np.zeros((len(D)))*0.
-	dist  = D
-	for MF in B:
-		B_nG, lc_Mpc, Lmax_Mpc = MF[0], MF[1], MF[2]
-		factor = 4.4E5 * B_nG**2 *  lc_Mpc * (Lmax_Mpc/100)**2
-		tau_max = factor * np.ones((len(D)))
-		ind_below = np.where(dist<Lmax_Mpc)
-		tau_max[ind_below] = tau_max[ind_below]*(dist[ind_below]/Lmax_Mpc)**2
-		tau2+=tau_max*tau_max
-
-	return np.sqrt(tau2) * (10**(logR-18)/100)**(-2) #yr #TBD: modify here
+	return np.sqrt(tau2) * (10**(logR-18)/100)**(-2)

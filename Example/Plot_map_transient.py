@@ -125,13 +125,13 @@ if __name__ == "__main__":
 	w_zR_Background = lambda ZA, z, logR: w_R(ZA, logR)/dzdt(z)*f_z(z)
 
 	# Load catalogue of galaxies
-	dist, l, b, Cn, tracer = map.load_Catalog(galCoord, Dmin=0., Dmax=dist_cut, tracer=trac, fluxmin=0.0001) # logSFR can be changed to logM*
+	dist, l, b, Cn, tracer = map.load_Catalog(galCoord, Dmin=0., Dmax=dist_cut, tracer=trac, fluxmin=0.000) # logSFR can be changed to logM*
 
 	# Compute the flux for each bin in redshift
 	res =  np.array([ts.Return_lnA_Deltat(Tensor, E_times_k, i, Z, w_zR_Gal) for i in tqdm(range(len(bin_z)))])
 
 	#For each galaxy, compute the flux (result[Glaxy_Number,1] for a detected nuclei result[Glaxy_Number,0])
-	result = map.match_Gal_Deltat_v2(res, Delta_t, k, tracer, dist, bin_dist, bin_logE, zmax)
+	result = map.match_Gal_Deltat(res, Delta_t, k, tracer, dist, bin_dist, bin_logE, zmax)
 
 	#Select tensor above dist_cut to compute isotropic background contribution
 	iso_result_over = np.zeros_like(res[zc:, :, :, 0])

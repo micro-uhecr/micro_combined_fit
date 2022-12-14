@@ -5,7 +5,7 @@ import pandas as pd
 import pathlib
 from scipy import interpolate
 from scipy.sparse import csr_matrix, csc_matrix
-import sparse as sp
+from combined_fit import spectrum as sp
 
 from combined_fit import constant
 
@@ -297,6 +297,14 @@ def find_n_given_z(z, zmin = 0, zmax = 1, dzmin = 1E-4, dzmax = 5E-2):
     b = dzmin - dzmax*zmin/(zmax-zmin)
     n = (np.log((z - dz(z)/2 + b/(a-1))/(zmin + b/(a-1)))/np.log(a))//1
     n = n.astype(int)
+
+    # Take the bin above if the galaxy is closer than the smallest bin
+    if np.isscalar(n):
+        if n==-1:
+            return 0
+    else:
+        ind = (n ==-1)
+        n[ind] = 0
     return n
 
 def Return_lnA(Tensor, E_times_k, bin_z, Z, w_zR):
@@ -332,6 +340,7 @@ def Return_lnA(Tensor, E_times_k, bin_z, Z, w_zR):
     EnergySpectrum = np.sum(Flux_tot, axis=1)
 
     return A, EnergySpectrum
+
 
 def Compute_integrated_Flux(Tensor, E_times_k, Z, w_zR):
     ''' Compute the total flux above a given energy
@@ -404,15 +413,6 @@ def Return_lnA_Deltat(Tensor, E_times_k, bin_z, Z, w_zR):
     ZA = np.concatenate([Tensor[i].ZA for i in range(len(Z))])
     je = np.array([Tensor[i].Contract_Ri_Given_z(Tensor[i].tensor_stacked_A, w_zR, Z[i], bin_z)/Tensor[i].delta_z[bin_z] for i in range(len(Z))])
     Flux_tot = np.concatenate(E_times_k*je, axis=0)
-#    EnergySpectrum = np.sum(Flux_tot, axis=1)
-
-    for i in range(len(Z)):#TBD Check what I've done above in Return_lnA
-        je = Tensor[i].Contract_Ri_Given_z(Tensor[i].tensor, w_zR, Z[i], bin_z)/Tensor[i].delta_z[bin_z]
-        Flux.append(E_times_k[i]*je)#/(10**t[i].logE * (t[i].logE[1]-t[i].logE[0]) * np.log(10)))
-        sel_ZA.append(Tensor[i].ZA)
-
-#    ZA = np.concatenate(sel_ZA)
-#    Flux_tot = np.concatenate(Flux, axis=0)
 
     uZA = np.unique(ZA)
     ZA_arr, stacked_Flux_tot = [], []

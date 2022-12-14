@@ -327,9 +327,9 @@ def Return_lnA(Tensor, E_times_k, bin_z, Z, w_zR):
 
     Returns
     -------
-    A : `array`
+    stacked_A : `array`
         The mass detected
-    EnergySpectrum : `array`
+    stacked_Flux_tot : `array`
         The flux detected for each mass A detected
     '''
 
@@ -339,8 +339,16 @@ def Return_lnA(Tensor, E_times_k, bin_z, Z, w_zR):
     Flux_tot = np.concatenate(E_times_k*je, axis=0)
     EnergySpectrum = np.sum(Flux_tot, axis=1)
 
-    return A, EnergySpectrum
+    uA = np.unique(A)
+    A_arr, stacked_Flux_tot = [], []
+    for a in uA:
+        sel = np.where(A == a)
+        A_arr.append(a)
+        stacked_Flux_tot.append(np.sum(EnergySpectrum[sel], axis=0))
 
+    stacked_A = np.array(A_arr)
+
+    return stacked_A, stacked_Flux_tot
 
 def Compute_integrated_Flux(Tensor, E_times_k, Z, w_zR):
     ''' Compute the total flux above a given energy

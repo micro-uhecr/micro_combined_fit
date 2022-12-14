@@ -32,30 +32,32 @@ if __name__ == "__main__":
 	Z	= [	1,	 2,  7,	14, 26]
 
 	logEmin = 19.6# Must be a 1 decimal value (18.2,18.3,etc.) 8EeV -> 18.9, 20EeV -> 19.3, 30 -> 19.5, 50 -> 19.7, 80 -> 19.9
-	logEmin_CF = 18.7 # Value above which the emissivity is computed in the Combined Fit.
 	SFR = True # Or False for SMD
 
 	#Distribution of Sources
 	dist_cut = 350#Mpc | Distance where the catalog ends
-	zmax = 1
+	zmax = 1 # Need to be the value used to generate the tensor
 	nside = 64
 
 	#Plot parameters
 	smooth = "fisher" # Can be "fisher" or "top-hat"
 	cmap = "afmhot" # Color map
 	radius = 12 #deg
-	galCoord= False # If true, the map will be plot in galactic coordinates
+	galCoord = False # If true, the map will be plot in galactic coordinates
+	fluxmin = 0. # The galaxy need to have the value tracer/dist^2 above fluxmin to be accounted for
 
 
 	if SFR==False:
 		logRcut = 18.3797
 		gamma = -0.369097
+		logEmin_CF = 18.7 # Value above which the emissivity is computed in the Combined Fit.
 		L = np.array([ 1.03326e+42, 1.08766e+44, 2.18835e+44, 3.15289e+43, 8.84709e+42])
 		f_z = ts.Load_evol(file = "smd_local.dat", key="smd")
 		trac = "logM*"
 	else:
 		logRcut = 18.2038
 		gamma = -1.96024
+		logEmin_CF = 18.7 # Value above which the emissivity is computed in the Combined Fit.
 		L = np.array([ 1.21357e+29, 3.06319e+44, 1.91915e+45, 3.88881e+43, 1.02726e+44])
 		f_z = ts.Load_evol(file= "sfrd_local.dat")
 		trac = "logSFR"
@@ -73,11 +75,9 @@ if __name__ == "__main__":
 	###########################################################################
 
 	#Loading  tensor
-	Tensor=[]
 	Tensor = ts.upload_Tensor(logEmin=logEmin)
 
 	#Loading  tensor for computing the alpha coefficient
-	Tensor_alpha=[]
 	Tensor_alpha = ts.upload_Tensor(logEmin=1)
 
 
@@ -116,14 +116,13 @@ if __name__ == "__main__":
 
 	# Injected spectrum galaxies
 	w_R = lambda ZA, logR: sp.Spectrum_Energy(ZA, logR, gamma, logRcut, logEmin=logEmin_CF)
-
 	w_zR_Gal = lambda ZA, z, logR: w_R(ZA, logR)
 
 	# Injected spectrum isotropic background (D>dist_cut)
 	w_zR_Background = lambda ZA, z, logR: w_R(ZA, logR)/dzdt(z)*f_z(z)
 
 	# Load catalogue of galaxies
-	dist, l, b, Cn, tracer = map.load_Catalog(galCoord, Dmin=1., Dmax=dist_cut, tracer=trac, fluxmin=0.) # logSFR can be changed to logM*
+	dist, l, b, Cn, tracer = map.load_Catalog(galCoord, Dmin=1., Dmax=dist_cut, tracer=trac, fluxmin=fluxmin) # logSFR can be changed to logM*
 
 	# Compute the flux for each bin in redshift
 	res =  np.array([ts.Return_lnA(Tensor, E_times_k, i, Z, w_zR_Gal) for i in tqdm(range(len(bin_z)))])
@@ -153,24 +152,22 @@ if __name__ == "__main__":
 
 	# Compute one map per detected nucleus for the foreground
 	time_tst = time.time()
-	lnA_map = np.transpose(map.LoadlnAMap(data, nside, result[:,1]))/constant._c
+	Map_Per_A_Detected = np.transpose(map.LoadlnAMap(data, nside, result[:,1]))/constant._c
 	print(time.time()-time_tst, "s")
 
 	# Get one map per detected nucleus for the isotropic background
-	iso_lnA_map = map.LoadIsolnAMap(nside, iso_result, iso_bin_z, lnA_map, alpha_fact, S_z)
+	iso_Map_Per_A_Detected = map.LoadIsolnAMap(nside, iso_result, iso_bin_z, Map_Per_A_Detected, alpha_fact, S_z)
 
 	#Compute the the full maps (foreground + background) and smoothed it
-	lnA_map_tot_unsmoothed = lnA_map + iso_lnA_map
-	lnA_map_tot = map.LoadSmoothedMap(lnA_map_tot_unsmoothed, radius, nside, smoothing=smooth)
+	Map_Per_A_Detected_tot_unsmoothed = Map_Per_A_Detected + iso_Map_Per_A_Detected
+	Map_Per_A_Detected_tot = map.LoadSmoothedMap(Map_Per_A_Detected_tot_unsmoothed, radius, nside, smoothing=smooth)
 
 	# Compute and normalized the flux map
 	int_flux = ts.Compute_integrated_Flux(Tensor, E_times_k, Z, w_zR_Background)
-	Flux_map = np.sum(lnA_map_tot, axis=0)
+	Flux_map = np.sum(Map_Per_A_Detected_tot, axis=0)
 	Flux_map = Flux_map / np.sum(Flux_map/hp.nside2npix(nside)) * int_flux
 	end = time.time()
 	print("Elapsed time for computing the map ", end - start)
-
-
 
 	################################## Plots ##################################
 	###########################################################################

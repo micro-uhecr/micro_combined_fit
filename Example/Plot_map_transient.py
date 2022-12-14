@@ -36,7 +36,7 @@ if __name__ == "__main__":
 
 	#Distribution of Sources
 	dist_cut = 350#Mpc | Distance where the catalog ends
-	zmax = 1
+	zmax = 1 # Need to be the value used to generate the tensor
 	nside = 64
 
 	#Plot parameters
@@ -63,7 +63,7 @@ if __name__ == "__main__":
 	# Convert emissivities to E_times_k
 	S_z = lambda z : 1/dzdt(z)*f_z(z)
 	dtdz = lambda z: 1/dzdt(z)
-	Delta_t = lambda z, logR: map.tau_propa_custom_yr(constant._fz_DL(z), constant.B_default, logR)#TBD: Do not call Delta_t here, rather use appropriate function right away in the map.py
+	Delta_t = lambda z, logR: map.tau_propa_custom_yr(constant._fz_DL(z), constant.B_default, logR)
 
 	norm = integrate.quad(S_z, 0, 2.5)[0]/ integrate.quad(dtdz, 0, 2.5)[0] / (1/constant._Mpc_2_km)**2
 	E_times_k = np.array(L/norm)
@@ -154,18 +154,18 @@ if __name__ == "__main__":
 	data = map.LoadShapedData(galCoord, dist*constant._Mpc_2_km, Cn, tracer, l, b)
 
 	# Compute one map per detected nucleus for the foreground
-	lnA_map = np.transpose(map.LoadlnAMap(data, nside, result[:,1]))/constant._c # Take 4s to run using full dataset
+	Map_Per_A_Detected = np.transpose(map.LoadlnAMap(data, nside, result[:,1]))/constant._c # Take 4s to run using full dataset
 
 	# Get one map per detected nucleus for the isotropic background
-	iso_lnA_map = map.LoadIsolnAMap(nside, iso_result, iso_bin_z, lnA_map, alpha_fact, S_z)
+	iso_Map_Per_A_Detected = map.LoadIsolnAMap(nside, iso_result, iso_bin_z, Map_Per_A_Detected, alpha_fact, S_z)
 
 	#Compute the the full maps (foreground + background) and smoothed it
-	lnA_map_tot_unsmoothed = lnA_map + iso_lnA_map
-	lnA_map_tot = map.LoadSmoothedMap(lnA_map_tot_unsmoothed, radius, nside, smoothing=smooth) # Take ~2s to run
+	Map_Per_A_Detected_tot_unsmoothed = Map_Per_A_Detected + iso_Map_Per_A_Detected
+	Map_Per_A_Detected_tot = map.LoadSmoothedMap(Map_Per_A_Detected_tot_unsmoothed, radius, nside, smoothing=smooth) # Take ~2s to run
 
 	# Compute and normalized the flux map
 	int_flux = ts.Compute_integrated_Flux(Tensor, E_times_k, Z, w_zR_Background)
-	Flux_map = np.sum(lnA_map_tot, axis=0)
+	Flux_map = np.sum(Map_Per_A_Detected_tot, axis=0)
 	Flux_map = Flux_map / np.sum(Flux_map/hp.nside2npix(nside)) * int_flux
 
 	end = time.time()

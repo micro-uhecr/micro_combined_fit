@@ -109,12 +109,6 @@ if __name__ == "__main__":
 	#For each galaxy, compute the flux (result[Glaxy_Number,1] for a detected nuclei result[Glaxy_Number,0])
 	result = map.match_Gal_Deltat(res, Delta_t, k, tracer, dist, bin_dist, bin_logE, zmax)
 
-	#Select tensor above dist_cut to compute isotropic background contribution
-	iso_result_over = np.zeros_like(res[zc:, :, :, 0])
-	iso_result_over[:, 0, :] = res[zc:, 0, :, 0]
-	iso_result_over[:, 1, :] = np.sum(res[zc:, 1, :, :], axis=2)
-	iso_result_over[:, 1, :] = np.transpose(np.transpose(iso_result_over[:, 1, :])*delta_z[zc:])
-
 	################## Make the link between the isotropic background and the galaxies ##################
 
 	z_cut = constant._fDL_z(dist_cut)
@@ -138,6 +132,12 @@ if __name__ == "__main__":
 		delta_z[zc] -= z_cut-(bin_z[zc]-delta_z[zc]/2)
 		iso_bin_z = iso_bin_z_over
 
+	#Select tensor above dist_cut to compute isotropic background contribution
+	iso_result_over = np.zeros_like(res[zc:, :, :, 0])
+	iso_result_over[:, 0, :] = res[zc:, 0, :, 0]
+	iso_result_over[:, 1, :] = np.sum(res[zc:, 1, :, :], axis=2)
+	iso_result_over[:, 1, :] = np.transpose(np.transpose(iso_result_over[:, 1, :])*delta_z[zc:])
+
 
 	if NewBin:
 		mini_bin = ((z_cut-under)*res[zc, :, :] + (over-z_cut)*res[zcu, :, :])/(over-under)
@@ -145,6 +145,7 @@ if __name__ == "__main__":
 		iso_result = np.insert(iso_result_over, 0, mini_bin, axis=0)
 	else:
 		iso_result = iso_result_over
+
 
 	#Get the percentage 'alpha' of isotropic background.
 	alpha_fact = map.alpha_factor(z_cut, logEmin, Tensor_alpha, A, Z, E_times_k, w_zR_Background, zmax)

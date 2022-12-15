@@ -212,7 +212,7 @@ def match_Gal(result, dist, bin_dist, zmax):
 	Parameters
 	----------
 	result : `numpy array`
-		Numpy array return by Return_lnA
+		Numpy array return by ts.Flux_Per_A_Detected()
 	dist : `numpy array`
 		array of len `number of galaxy` with the distance of each galaxy in Mpc
 	bin_dist : `numpy array`
@@ -244,7 +244,7 @@ def match_Gal_Deltat(res, Delta_t, k, tracer, dist, bin_dist, bin_logE, zmax):
 	Parameters
 	----------
 	res : `numpy array`
-		Numpy array return by Return_lnA
+		Numpy array return by ts.Flux_Per_ZA_Energy_Detected()
 	Delta_t : `function`
 		Function to compute Delta_t
 	k : `float`
@@ -266,23 +266,19 @@ def match_Gal_Deltat(res, Delta_t, k, tracer, dist, bin_dist, bin_logE, zmax):
 
 	# Find idx to associate to each galaxy
 	idx = ts.find_n_given_z(constant._fDL_z(dist), zmax=zmax)
+	weights = np.array([dist-bin_dist[idx], bin_dist[idx+1]-dist])
+	den = np.sum(weights, axis=0)
 
 	# Compute the rigidity for all detected energy and detected charge
-	mass = np.array([x[1] for x in res[0,0]])[:,0]
-	energy = [bin_logE]*np.size(mass)
+	charge = np.array([x[1] for x in res[0,0]])[:,0]
+	energy = [bin_logE]*np.size(charge)
 
 	# Flatten and regroup them in order to compute once and for all
-	rigidity = np.transpose(np.transpose(energy)-np.log10(mass))
+	rigidity = np.transpose(np.transpose(energy)-np.log10(charge))
 	rig_order, rig_order_idx = np.unique(rigidity, return_index=True)
 
-
 	# Compute the time Delta tau for each rigidity and for each source
-	start = time.time()
-	# Delta_Deltat = np.transpose(tau_propa_custom_yr_v2(dist, constant.B_default, rig_order[::-1]) - tau_propa_custom_yr_v2(dist, constant.B_default, np.append(100,rig_order[::-1])[0:-1]))
 	Delta_Deltat = np.array([tau_propa_custom_yr(dist,  constant.B_default, rig_order[::-1][i]) - tau_propa_custom_yr(dist,  constant.B_default,np.append(100,rig_order[::-1])[0:-1][i]) for i in range(len(rig_order))])
-	print("First time",time.time() - start, "s")
-
-
 
 	# Compute Poisson parameter and drawn at random for each galaxy and each rigidity (quick)
 	lambd = k*tracer*Delta_Deltat
@@ -292,24 +288,12 @@ def match_Gal_Deltat(res, Delta_t, k, tracer, dist, bin_dist, bin_logE, zmax):
 	Nburst_drawn[ind_poisson] = np.random.poisson(lambd[ind_poisson])
 	Nburst_drawn[ind_gaussian] = np.random.normal(lambd[ind_gaussian], np.sqrt(lambd[ind_gaussian]))
 
-	# This step takes ~30s using full dataset
-	start = time.time()
-	# Cum_Number_Bursts= np.cumsum(Nburst_drawn, axis=0)
-	# trac = np.transpose([tracer]*len(rig_order))
-	# test = (k*trac*tau_propa_custom_yr_v2(dist, constant.B_default ,rig_order[::-1])).T
-	# print(np.shape(Cum_Number_Bursts))
-	# print(np.shape(test))
-	# Cum_Number_Bursts = Cum_Number_Bursts / test
-
+	# Compute cumulative burst and divide it by the sum of lambda
 	Cum_Number_Bursts = np.cumsum(Nburst_drawn, axis=0) / (k*tracer*np.array([tau_propa_custom_yr(dist, constant.B_default, rig_order[::-1][i]) for i in range(len(rig_order))]))
 	Cum_Number_Bursts = np.transpose(Cum_Number_Bursts)
-	print("Second time",time.time() - start, "s")
 
-	#Flux_matrix= np.zeros_like(res[idx, 1, :, :])
 	# Associate to each of the rig_order an array of idx correspondig in rigidity
 	ind_lambda = [np.where(rigidity==rig_order[::-1][i]) for i in range(len(rig_order))]
-
-	time_var = time.time()
 
 	coords = []
 	value = []
@@ -322,16 +306,20 @@ def match_Gal_Deltat(res, Delta_t, k, tracer, dist, bin_dist, bin_logE, zmax):
 		# Since one rigidity can correspond to multiply E/Z combinaisation. A loop is done over all E/Z that are equal to the rigidity computed
 		for k in range(len(ind_lambda[gal[1]][0])):
 			bin_redshift = idx[gal[0]]
-			bin_mass_detected = ind_lambda[gal[1]][0][k]
+			bin_ZA_detected = ind_lambda[gal[1]][0][k]
 			bin_energy_detected = ind_lambda[gal[1]][1][k]
-			Flux = res[bin_redshift, 1, bin_mass_detected, bin_energy_detected]
+			Flux_below = res[bin_redshift, 1, bin_ZA_detected, bin_energy_detected]
+			Flux_above = res[bin_redshift+1, 1, bin_ZA_detected, bin_energy_detected]
 
-			if Flux > 0:
+			if Flux_below > 0 or Flux_above>0:
 				#Store the coordinates with non zeros values
-				coords.append([gal[0], bin_mass_detected, bin_energy_detected])
+				coords.append([gal[0], bin_ZA_detected, bin_energy_detected])
 
 				#The flux of each galaxy is multiply by the number of bursts
-				value.append(Cum_Number_Bursts[gal[0], gal[1]] * Flux)
+				if bin_redshift == -1:
+					value.append(Cum_Number_Bursts[gal[0], gal[1]] * Flux_above )
+				else:
+					value.append(Cum_Number_Bursts[gal[0], gal[1]] * (Flux_below*weights[1,idx[gal[0]]] + Flux_above*weights[0,idx[gal[0]]] )/den[idx[gal[0]]] )
 
 	# Store it in a sparce matrix
 	Flux_matrix = sparse.COO(np.transpose(coords), value, shape=np.shape(res[idx, 1, :, :]))
@@ -339,13 +327,10 @@ def match_Gal_Deltat(res, Delta_t, k, tracer, dist, bin_dist, bin_logE, zmax):
 	# Sum for all energies and convert it into a normal numpy array
 	Flux_Matrix_Sum_Energy = Flux_matrix.sum(axis=2).todense()
 
-
-	print("Time taken = ", time.time() - time_var ,"s    |    Size = ", Flux_matrix.nbytes/((1024)**2) , "mB")
-
 	# Shape the result in order to match
 	Shaped_Final_Result = Flux_Matrix_Sum_Energy[:, :, None]
-	Mass_detected = np.array([res[0, 0, :, 0][:, None]]*len(idx))
-	Shaped_Final_Result= np.append(Mass_detected, Shaped_Final_Result, axis=2)
+	ZA_detected = np.array([res[0, 0, :, 0][:, None]]*len(idx))
+	Shaped_Final_Result= np.append(ZA_detected, Shaped_Final_Result, axis=2)
 	Shaped_Final_Result = np.array(np.swapaxes(Shaped_Final_Result, 1,2))
 
 
@@ -581,7 +566,7 @@ def LoadShapedData(galCoord, Dist, Cn, tracer, l, b):
 
 	return dataset_panda
 
-def LoadlnAMap(dataset, nside, Mass_flux):
+def Load_Map_A_Detected(dataset, nside, Mass_flux):
 	''' Produce a array that can be plot using HealPy
 
 	Parameters
@@ -594,7 +579,7 @@ def LoadlnAMap(dataset, nside, Mass_flux):
 		Flux for each galaxy
 	Returns
 	-------
-	lnA_map : `numpy array`
+	Map_A_Detected : `numpy array`
 		Map in a Healpy format
 	'''
 
@@ -608,37 +593,17 @@ def LoadlnAMap(dataset, nside, Mass_flux):
 	fact = np.tile(dataset['Tracer']/(dataset['Dist']**2 * dataset['Cn']), tuple(size_reshape)).T.astype('float64')
 	fact *= Mass_flux.astype('float64')
 
-	# lnA_map = np.histogram([Galaxies]*91, bins=np.arange(npix+1), weights = fact.T)[0]
-	# print(np.shape(lnA_map))
-	# Flux = pd.DataFrame(fact)
-	#
-	# print(Flux)
-	# print(dataset)
-	# Merged_Galaxies = dataset.merge(Flux, left_index=True, right_index=True)
-	# Merged_Galaxies = Merged_Galaxies.groupby(['Pixel']).sum()
-	#
-	# print(Merged_Galaxies)
-	# print(npix)
+	Map_A_Detected = np.zeros((npix, np.size(Mass_flux[0])))
 
-	# print(np.shape(fact))
-	# for  i in range(len(np.shape(fact)[0])):
-	# 	dataset['Flux_' + str(i)] = fact[0]
-	#
-	# print(Merged_Galaxies.iloc[:,5:])
-	# print(Merged_Galaxies.iloc[:,0])
-	# print(Merged_Galaxies.iloc['Pixel'].to_numpy())
+	for i in range(len(Galaxies)):
+		Map_A_Detected[Galaxies[i]] = Map_A_Detected[Galaxies[i]] + fact[i]
 
-	lnA_map = np.zeros((npix, np.size(Mass_flux[0])))
-	# lnA_map[Merged_Galaxies.iloc[:,0].to_numpy()] = Merged_Galaxies.iloc[:,5:].to_numpy()
-	for i in range(len(Galaxies)):#TBD: SPEED UP BY USING PANDAS GROUPBY: https://pandas.pydata.org/pandas-docs/stable/reference/api/pandas.DataFrame.groupby.html
-		lnA_map[Galaxies[i]] = lnA_map[Galaxies[i]] + fact[i]#Mass_flux[i]*fact[i]
 
-	print(np.shape(lnA_map))
-	return lnA_map
+	return Map_A_Detected
 
-def LoadIsolnAMap(nside, iso_result, iso_bin_z, lnA_map, alpha_fact, f_z):
+def Load_IsoMap_A_Detected(nside, iso_result, iso_bin_z, Map_A_Detected, alpha_fact, f_z, coefficient=0.):
 	''' Produce an istropic Healpy map coming from the background normalized
-	regarding the alpha_factor and the map from the foreground (lnA_map)
+	regarding the alpha_factor and the map from the foreground (Map_A_Detected)
 
 	Parameters
 	----------
@@ -648,7 +613,7 @@ def LoadIsolnAMap(nside, iso_result, iso_bin_z, lnA_map, alpha_fact, f_z):
 		Isotropic flux for each distance iso_bin_z
 	iso_bin_z : `numpy array`
 		Array in redshift
-	lnA_map : `numpy array`
+	Map_A_Detected : `numpy array`
 		Foreground map
 	alpha_fact : `float`
 		Proportion of background compared to foreground
@@ -668,18 +633,19 @@ def LoadIsolnAMap(nside, iso_result, iso_bin_z, lnA_map, alpha_fact, f_z):
 
 	# Construct map in Healpy format
 	iso_results = [var]*npix
-	iso_lnA_map = np.transpose(iso_results)
+	iso_Map_A_Detected = np.transpose(iso_results)
 
-	int = np.sum(lnA_map)
-	iso_int = np.sum(iso_lnA_map)
+	int = np.sum(Map_A_Detected)
+	iso_int = np.sum(iso_Map_A_Detected)
 
 	# Normalize it
 	if iso_int == 0: #This is a simple patch to override division by zero at high logEmin
 		lnA_iso_map = 0
 	else:
 		param = alpha_fact/(1-alpha_fact)
-		coefficient = param*(int/iso_int)
-		lnA_iso_map = coefficient*iso_lnA_map
+		if coefficient == 0:
+			coefficient = param*(int/iso_int)
+		lnA_iso_map = coefficient*iso_Map_A_Detected
 
 	return lnA_iso_map
 
@@ -753,7 +719,7 @@ def LoadSmoothedMap(hp_map, radius_deg, nside, smoothing="fisher"):
 
 
 
-def tau_propa_custom_yr(D, B, logR):  # TBD The v2 version can ingest D and R with different sizes
+def tau_propa_custom_yr(D, B, logR):  #  The v2 version can ingest D and R with different sizes
 	'''Propagation-induced delay in yr'''
 	'''Based on Eq. 5 in Stanev 2008 arXiv:0810.2501 assuming delay = spread'''
 	if np.isscalar(D):

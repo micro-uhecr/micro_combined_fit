@@ -298,16 +298,9 @@ def find_n_given_z(z, zmin = 0, zmax = 1, dzmin = 1E-4, dzmax = 5E-2):
     n = (np.log((z - dz(z)/2 + b/(a-1))/(zmin + b/(a-1)))/np.log(a))//1
     n = n.astype(int)
 
-    # Take the bin above if the galaxy is closer than the smallest bin
-    if np.isscalar(n):
-        if n==-1:
-            return 0
-    else:
-        ind = (n ==-1)
-        n[ind] = 0
     return n
 
-def Return_lnA(Tensor, E_times_k, bin_z, Z, w_zR):
+def Flux_Per_A_Detected(Tensor, E_times_k, bin_z, Z, w_zR):
     ''' Return the flux EnergySpectrum for a given detected A
 
     Parameters
@@ -387,7 +380,7 @@ def Compute_integrated_Flux(Tensor, E_times_k, Z, w_zR):
 
     return total_spectrum
 
-def Return_lnA_Deltat(Tensor, E_times_k, bin_z, Z, w_zR):
+def Flux_Per_ZA_Energy_Detected(Tensor, E_times_k, bin_z, Z, w_zR):
     ''' For a given z retun the nearest bin in
     the tensor below z in a transient scenario
 

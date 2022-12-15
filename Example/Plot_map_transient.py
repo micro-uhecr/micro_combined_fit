@@ -44,6 +44,7 @@ if __name__ == "__main__":
 	cmap= 'afmhot' # Color map
 	radius = 12 #deg
 	galCoord= False # If true, the map will be plot in galactic coordinates
+	fluxmin = 0. # The galaxy need to have the value tracer/dist^2 above fluxmin to be accounted for
 	k= 1e-7
 
 
@@ -75,11 +76,9 @@ if __name__ == "__main__":
 	###########################################################################
 
 	#Loading  tensor
-	Tensor=[]
 	Tensor = ts.upload_Tensor(logEmin=logEmin)
 
 	#Loading  tensor for computing the alpha coefficient
-	Tensor_alpha=[]
 	Tensor_alpha = ts.upload_Tensor(logEmin=1)
 
 
@@ -88,6 +87,35 @@ if __name__ == "__main__":
 	delta_z = np.array(Tensor[0].delta_z)
 	bin_dist = constant._fz_DL(bin_z)
 	bin_logE = np.array(Tensor[0].logE)
+
+
+	###### Compute injected specrum and associate to galaxy and isotropy ######
+	###########################################################################
+
+	start = time.time()
+	#Injected spectrum galaxies
+	w_R = lambda ZA, logR: sp.Spectrum_Energy(ZA, logR, gamma, logRcut, logEmin=logEmin_CF)
+	w_zR_Gal = lambda ZA, z, logR: w_R(ZA, logR)
+
+	#Injected spectrum isotropic background (D>dist_cut)
+	w_zR_Background = lambda ZA, z, logR: w_R(ZA, logR)/dzdt(z)*f_z(z)
+
+	# Load catalogue of galaxies
+	dist, l, b, Cn, tracer = map.load_Catalog(galCoord, Dmin=0., Dmax=dist_cut, tracer=trac, fluxmin=fluxmin) # logSFR can be changed to logM*
+
+	# Compute the flux for each bin in redshift
+	res =  np.array([ts.Flux_Per_ZA_Energy_Detected(Tensor, E_times_k, i, Z, w_zR_Gal) for i in tqdm(range(len(bin_z)))])
+
+	#For each galaxy, compute the flux (result[Glaxy_Number,1] for a detected nuclei result[Glaxy_Number,0])
+	result = map.match_Gal_Deltat(res, Delta_t, k, tracer, dist, bin_dist, bin_logE, zmax)
+
+	#Select tensor above dist_cut to compute isotropic background contribution
+	iso_result_over = np.zeros_like(res[zc:, :, :, 0])
+	iso_result_over[:, 0, :] = res[zc:, 0, :, 0]
+	iso_result_over[:, 1, :] = np.sum(res[zc:, 1, :, :], axis=2)
+	iso_result_over[:, 1, :] = np.transpose(np.transpose(iso_result_over[:, 1, :])*delta_z[zc:])
+
+	################## Make the link between the isotropic background and the galaxies ##################
 
 	z_cut = constant._fDL_z(dist_cut)
 	zcu = ts.find_n_given_z(z_cut, zmax=zmax) #Find the closest bin_z value before z_cut
@@ -111,34 +139,6 @@ if __name__ == "__main__":
 		iso_bin_z = iso_bin_z_over
 
 
-
-
-	###### Compute injected specrum and associate to galaxy and isotropy ######
-	###########################################################################
-
-	start = time.time()
-	#Injected spectrum galaxies
-	w_R = lambda ZA, logR: sp.Spectrum_Energy(ZA, logR, gamma, logRcut, logEmin=logEmin_CF)
-	w_zR_Gal = lambda ZA, z, logR: w_R(ZA, logR)
-
-	#Injected spectrum isotropic background (D>dist_cut)
-	w_zR_Background = lambda ZA, z, logR: w_R(ZA, logR)/dzdt(z)*f_z(z)
-
-	# Load catalogue of galaxies
-	dist, l, b, Cn, tracer = map.load_Catalog(galCoord, Dmin=0., Dmax=dist_cut, tracer=trac, fluxmin=0.000) # logSFR can be changed to logM*
-
-	# Compute the flux for each bin in redshift
-	res =  np.array([ts.Return_lnA_Deltat(Tensor, E_times_k, i, Z, w_zR_Gal) for i in tqdm(range(len(bin_z)))])
-
-	#For each galaxy, compute the flux (result[Glaxy_Number,1] for a detected nuclei result[Glaxy_Number,0])
-	result = map.match_Gal_Deltat(res, Delta_t, k, tracer, dist, bin_dist, bin_logE, zmax)
-
-	#Select tensor above dist_cut to compute isotropic background contribution
-	iso_result_over = np.zeros_like(res[zc:, :, :, 0])
-	iso_result_over[:, 0, :] = res[zc:, 0, :, 0]
-	iso_result_over[:, 1, :] = np.sum(res[zc:, 1, :, :], axis=2)
-	iso_result_over[:, 1, :] = np.transpose(np.transpose(iso_result_over[:, 1, :])*delta_z[zc:])
-
 	if NewBin:
 		mini_bin = ((z_cut-under)*res[zc, :, :] + (over-z_cut)*res[zcu, :, :])/(over-under)
 		mini_bin *= mini_bin_delta_z
@@ -154,10 +154,10 @@ if __name__ == "__main__":
 	data = map.LoadShapedData(galCoord, dist*constant._Mpc_2_km, Cn, tracer, l, b)
 
 	# Compute one map per detected nucleus for the foreground
-	Map_Per_A_Detected = np.transpose(map.LoadlnAMap(data, nside, result[:,1]))/constant._c # Take 4s to run using full dataset
+	Map_Per_A_Detected = np.transpose(map.Load_Map_A_Detected(data, nside, result[:,1]))/constant._c # Take 4s to run using full dataset
 
 	# Get one map per detected nucleus for the isotropic background
-	iso_Map_Per_A_Detected = map.LoadIsolnAMap(nside, iso_result, iso_bin_z, Map_Per_A_Detected, alpha_fact, S_z)
+	iso_Map_Per_A_Detected = map.Load_IsoMap_A_Detected(nside, iso_result, iso_bin_z, Map_Per_A_Detected, alpha_fact, S_z)
 
 	#Compute the the full maps (foreground + background) and smoothed it
 	Map_Per_A_Detected_tot_unsmoothed = Map_Per_A_Detected + iso_Map_Per_A_Detected
@@ -170,7 +170,6 @@ if __name__ == "__main__":
 
 	end = time.time()
 	print("Elapsed time for computing one map ", end - start)
-
 
 
 

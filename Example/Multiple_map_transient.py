@@ -6,6 +6,7 @@ import matplotlib.pyplot as plt
 from iminuit import minimize
 from scipy import integrate
 import healpy as hp
+import os
 
 from combined_fit import spectrum as sp
 from combined_fit import minimizer as minim
@@ -17,7 +18,6 @@ from combined_fit import draw
 from combined_fit import map
 
 dzdt = lambda z: constant._H0*(1+z)*np.sqrt(constant._OmegaLambda + constant._OmegaM*(1.+z)**3)
-
 
 ### Main ##########################################################
 if __name__ == "__main__":
@@ -32,39 +32,42 @@ if __name__ == "__main__":
 	Z	= [	1,	 2,  7,	14, 26]
 
 	logEmin = 19.6# Must be a 1 decimal value (18.2,18.3,etc.) 8EeV -> 18.9, 20EeV -> 19.3, 30 -> 19.5, 50 -> 19.7, 80 -> 19.9
+	logEmin_CF = 18.7 # Value above which the emissivity is computed in the Combined Fit.
 	SFR = True # Or False for SMD
 
 	#Distribution of Sources
 	dist_cut = 350#Mpc | Distance where the catalog ends
 	zmax = 1 # Need to be the value used to generate the tensor
 	nside = 64
+	Nmaps = 10 # Number of maps produced
 
 	#Plot parameters
-	smooth = "fisher" # Can be "fisher" or "top-hat"
-	cmap = "afmhot" # Color map
+	smooth= "fisher" # Can be "fisher" or "top-hat"
+	cmap= 'afmhot' # Color map
 	radius = 12 #deg
-	galCoord = False # If true, the map will be plot in galactic coordinates
+	galCoord= False # If true, the map will be plot in galactic coordinates
 	fluxmin = 0. # The galaxy need to have the value tracer/dist^2 above fluxmin to be accounted for
+	k= 1e-8
+	coef = 0.00043297120475508207 # The value of coefficient used to multiply the isotropic background. If 0 compute it at each interaction if non zero will remain constant through out the maps. (Need to be computed in the stationnary scenario and then put here)
 
 
 	if SFR==False:
 		logRcut = 18.3797
 		gamma = -0.369097
-		logEmin_CF = 18.7 # Value above which the emissivity is computed in the Combined Fit.
 		L = np.array([ 1.03326e+42, 1.08766e+44, 2.18835e+44, 3.15289e+43, 8.84709e+42])
 		f_z = ts.Load_evol(file = "smd_local.dat", key="smd")
 		trac = "logM*"
 	else:
 		logRcut = 18.2038
 		gamma = -1.96024
-		logEmin_CF = 18.7 # Value above which the emissivity is computed in the Combined Fit.
 		L = np.array([ 1.21357e+29, 3.06319e+44, 1.91915e+45, 3.88881e+43, 1.02726e+44])
-		f_z = ts.Load_evol(file= "sfrd_local.dat")
+		f_z = ts.Load_evol(file = "sfrd_local.dat")
 		trac = "logSFR"
 
 	# Convert emissivities to E_times_k
 	S_z = lambda z : 1/dzdt(z)*f_z(z)
 	dtdz = lambda z: 1/dzdt(z)
+	Delta_t = lambda z, logR: map.tau_propa_custom_yr(constant._fz_DL(z), constant.B_default, logR)
 
 	norm = integrate.quad(S_z, 0, 2.5)[0]/ integrate.quad(dtdz, 0, 2.5)[0] / (1/constant._Mpc_2_km)**2
 	E_times_k = np.array(L/norm)
@@ -84,34 +87,28 @@ if __name__ == "__main__":
 	### Load the binning in reshift
 	bin_z = np.array(Tensor[0].z)
 	delta_z = np.array(Tensor[0].delta_z)
-	bin_dist = constant._fz_DL(bin_z) # Convert redshift to Mpc
+	bin_dist = constant._fz_DL(bin_z)
+	bin_logE = np.array(Tensor[0].logE)
 
 
 	###### Compute injected specrum and associate to galaxy and isotropy ######
 	###########################################################################
 
-	start = time.time()
-
-	# Injected spectrum galaxies
+	#Injected spectrum galaxies
 	w_R = lambda ZA, logR: sp.Spectrum_Energy(ZA, logR, gamma, logRcut, logEmin=logEmin_CF)
 	w_zR_Gal = lambda ZA, z, logR: w_R(ZA, logR)
 
-	# Injected spectrum isotropic background (D>dist_cut)
+	#Injected spectrum isotropic background (D>dist_cut)
 	w_zR_Background = lambda ZA, z, logR: w_R(ZA, logR)/dzdt(z)*f_z(z)
 
 	# Load catalogue of galaxies
-	dist, l, b, Cn, tracer = map.load_Catalog(galCoord, Dmin=1., Dmax=dist_cut, tracer=trac, fluxmin=fluxmin) # logSFR can be changed to logM*
+	dist, l, b, Cn, tracer = map.load_Catalog(galCoord, Dmin=0., Dmax=dist_cut, tracer=trac, fluxmin=fluxmin) # logSFR can be changed to logM*
 
 	# Compute the flux for each bin in redshift
-	res =  np.array([ts.Flux_Per_A_Detected(Tensor, E_times_k, i, Z, w_zR_Gal) for i in tqdm(range(len(bin_z)))])
-	print(np.shape(res))
-
-	# Associate the flux (res) to each galaxy (Flux: result[Glaxy_Number,1] for a detected nuclei result[Glaxy_Number,0])
-	result = map.match_Gal(res, dist, bin_dist, zmax)
-
-
+	res =  np.array([ts.Flux_Per_ZA_Energy_Detected(Tensor, E_times_k, i, Z, w_zR_Gal) for i in tqdm(range(len(bin_z)))])
 
 	################## Make the link between the isotropic background and the galaxies ##################
+
 	z_cut = constant._fDL_z(dist_cut)
 	zcu = ts.find_n_given_z(z_cut, zmax=zmax) #Find the closest bin_z value before z_cut
 	zc = zcu + 1
@@ -119,9 +116,12 @@ if __name__ == "__main__":
 	iso_bin_z_over = bin_z[zc:]
 
 	#Select tensor above dist_cut to compute isotropic background contribution
-	iso_result_over = np.copy(res[zc:, :, :])
+	iso_result_over = np.zeros_like(res[zc:, :, :, 0])
+	iso_result_over[:, 0, :] = res[zc:, 0, :, 0]
+	iso_result_over[:, 1, :] = np.sum(res[zc:, 1, :, :], axis=2)
 	iso_result_over[:, 1, :] = np.transpose(np.transpose(iso_result_over[:, 1, :])*delta_z[zc:])
-	
+
+
 	# Safety net
 	if over< z_cut or under>z_cut:
 		print("WATCHOUT !!! Problem when using function find_n_given_z")
@@ -137,13 +137,13 @@ if __name__ == "__main__":
 		delta_z[zc] -= z_cut-(bin_z[zc]-delta_z[zc]/2)
 		iso_bin_z = iso_bin_z_over
 
+
 	if NewBin:
 		mini_bin = ((z_cut-under)*res[zc, :, :] + (over-z_cut)*res[zcu, :, :])/(over-under)
 		mini_bin *= mini_bin_delta_z
 		iso_result = np.insert(iso_result_over, 0, mini_bin, axis=0)
 	else:
 		iso_result = iso_result_over
-
 
 	#Get the percentage 'alpha' of isotropic background.
 	alpha_fact = map.alpha_factor(z_cut, logEmin, Tensor_alpha, A, Z, E_times_k, w_zR_Background, zmax)
@@ -152,40 +152,36 @@ if __name__ == "__main__":
 	# Shape the galaxies data to produce map
 	data = map.LoadShapedData(galCoord, dist*constant._Mpc_2_km, Cn, tracer, l, b)
 
-	# Compute one map per detected nucleus for the foreground
-	time_tst = time.time()
-	Map_Per_A_Detected = np.transpose(map.Load_Map_A_Detected(data, nside, result[:,1]))/constant._c
-	print(time.time()-time_tst, "s")
+	# Create the folder
+	folder = "Results_SFRD/SFRD_TALYS_LogEmin_" + str(logEmin) + "_k_" + str(k) + "_radius_" + str(radius) + "_B_LGMF_nG_" + str(constant.B_LGMF_nG) + "_B_IGMF_nG_" + str(constant.B_IGMF_nG)+ "_smoothing_" + str(smooth) + "_GC_" + str(galCoord) + "_fluxmin_" + str(fluxmin)
+	os.makedirs(folder, exist_ok=True)
 
-	# Get one map per detected nucleus for the isotropic background
-	iso_Map_Per_A_Detected = map.Load_IsoMap_A_Detected(nside, iso_result, iso_bin_z, Map_Per_A_Detected, alpha_fact, S_z)
+	################################# Loop overs Nmaps #################################
 
-	#Compute the the full maps (foreground + background) and smoothed it
-	Map_Per_A_Detected_tot_unsmoothed = Map_Per_A_Detected + iso_Map_Per_A_Detected
-	Map_Per_A_Detected_tot = map.LoadSmoothedMap(Map_Per_A_Detected_tot_unsmoothed, radius, nside, smoothing=smooth)
+	for i in tqdm(range(Nmaps)):
 
-	# Compute and normalized the flux map
-	int_flux = ts.Compute_integrated_Flux(Tensor, E_times_k, Z, w_zR_Background)
-	Flux_map = np.sum(Map_Per_A_Detected_tot, axis=0)
-	Flux_map = Flux_map / np.sum(Flux_map/hp.nside2npix(nside)) * int_flux
-	end = time.time()
-	print("Elapsed time for computing the map ", end - start)
-
-	################################## Plots ##################################
-	###########################################################################
-
-	if galCoord:
-		ax_title = "Galactic coordinates"
-	else:
-		ax_title = "Equatorial coordinates"
-
-	fig_name = "Flux_map"
-
-	print("Min flux : " , np.min(Flux_map), r" $km^{-2} \, yr^{-1} \, sr^{-1}$ | " ,"Max flux : " , np.max(Flux_map), r" $km^{-2} \, yr^{-1} \, sr^{-1}$" )
-	title = r"Flux Map, $\Phi(\log_{10} (E/{\rm eV}) >$" + str(logEmin) + r"$)$ - Fisher smoothing with "+ str(radius) +"° radius"
-	color_bar_title = r"Flux $[\rm km^{-2} \, yr^{-1} \, sr^{-1}]$"
-	map.PlotHPmap(Flux_map, nside, galCoord, title, color_bar_title, ax_title, fig_name, plot_zoa=False, write=False, projection="mollweide", cmap=cmap, vmin=-1, vmax=-1)
+		#For each galaxy, compute the flux (result[Glaxy_Number,1] for a detected nuclei result[Glaxy_Number,0])
+		result = map.match_Gal_Deltat(res, Delta_t, k, tracer, dist, bin_dist, bin_logE, zmax)
 
 
-	plt.show()
-Flux_Per_A_Detected
+		# Compute one map per detected nucleus for the foreground
+		Map_Per_A_Detected = np.transpose(map.Load_Map_A_Detected(data, nside, result[:,1]))/constant._c # Take 4s to run using full dataset
+
+		# Get one map per detected nucleus for the isotropic background
+		iso_Map_Per_A_Detected = map.Load_IsoMap_A_Detected(nside, iso_result, iso_bin_z, Map_Per_A_Detected, alpha_fact, S_z, coefficient=coef)
+
+		#Compute the the full maps (foreground + background) and smoothed it
+		Map_Per_A_Detected_tot_unsmoothed = Map_Per_A_Detected + iso_Map_Per_A_Detected
+		Map_Per_A_Detected_tot = map.LoadSmoothedMap(Map_Per_A_Detected_tot_unsmoothed, radius, nside, smoothing=smooth) # Take ~2s to run
+
+		# Compute the flux map
+		Flux_map = np.sum(Map_Per_A_Detected_tot, axis=0)
+
+		#Compte <ln A> map
+		mass = np.array([x[1] for x in result[0,0]])
+		lnA_Mean_map_full = np.dot(np.log(mass), Map_Per_A_Detected_tot)/np.sum(Map_Per_A_Detected_tot, axis=0)
+
+		filename = folder + "/Flux_map_" + str(i) + ".fits"
+		hp.fitsfunc.write_map(filename, Flux_map)
+		filename = folder + "/Mass_map_" + str(i) + ".fits"
+		hp.fitsfunc.write_map(filename, lnA_Mean_map_full)

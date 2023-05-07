@@ -16,65 +16,55 @@ def zbins(zmin = 0, zmax = 2.5, dz_min = 1E-4, dz_max = 0.5):
 class Output_as_Simprop(Module):
     """Outputs parent particle information.
     """
-    def __init__(self, fname, Injected_Species, Dlim=2.5 * Gpc):
+    def __init__(self, fname):
         Module.__init__(self)
 
         self.fout = open(fname, 'w')
-        self.Dlim = Dlim
-        self.sn_list = []
-        self.injspec = Injected_Species
+        self.mom_list = []
+        self.dau_list = []
 
     def process(self, c):
-        pid = c.current.getId()
-        sn = c.getCreatedSerialNumber()
-        z = c.getRedshift()
-        
+        pid = c.source.getId()
         Z = chargeNumber(pid)
         A = massNumber(pid)
-        
-        e = c.current.getEnergy() / eV
-        R = c.current.getPosition().getR()
-        
-        if R >= self.Dlim:
-            if (pid == self.injspec) and (sn not in self.sn_list): 
-                self.fout.write(f'\n{sn:d} {Z:d} {A:d} {e:+5.4e} {z:7.6f} 0')
-                self.sn_list.append(sn)
-        elif R <= 1 * pc:
-            self.fout.write(f' {Z:d} {A:d} {e:+5.4e} 1.0')
+        E = c.source.getEnergy() / eV
+        z = lightTravelDistance2Redshift(c.source.getPosition().x)
+
+        mother = (Z, A, E, z)
+
+        if self.mom_list == []:
+            self.mom_list.append(mother)
+
+        if mother not in self.mom_list:
+            self.fout.write(f'{len(self.mom_list):d} {Z:d} {A:d} {E:5.4e} {z:7.6f} {len(self.dau_list):d}')
+            
+            # write info of daughters belonging to previous nucleus
+            for Zd, Ad, Ed in list(sorted(set(self.dau_list))):
+                nd = self.dau_list.count((Zd, Ad, Ed))
+                self.fout.write(f' {Zd:d} {Ad:d} {Ed:+5.4e} {nd:d}')
+            self.fout.write('\n')
+
+            self.mom_list.append(mother)
+            self.dau_list = []
+            
+        # Record daughter info
+        pid = c.current.getId()
+        Zd = chargeNumber(pid)
+        Ad = massNumber(pid)
+        Ed = c.current.getEnergy() / eV
+
+        self.dau_list.append((Zd, Ad, Ed))
         
     def close(self):
-        self.fout.close()
+        # record the last set values
+        Z, A, E, z = self.mom_list[-1]
+        self.fout.write(f'{len(self.mom_list):d} {Z:d} {A:d} {E:5.4e} {z:7.6f} {len(self.dau_list):d}')
 
-class Output_as_Simprop(Module):
-    """Outputs parent particle information.
-    """
-    def __init__(self, fname, Injected_Species, Dlim=2.5 * Gpc):
-        Module.__init__(self)
+        # write info of daughters
+        for Zd, Ad, Ed in list(sorted(set(self.dau_list))):
+            nd = self.dau_list.count((Zd, Ad, Ed))
+            self.fout.write(f' {Zd:d} {Ad:d} {Ed:+5.4e} {nd:d}')
 
-        self.fout = open(fname, 'w')
-        self.Dlim = Dlim
-        self.sn_list = []
-        self.injspec = Injected_Species
-
-    def process(self, c):
-        R = c.current.getPosition().getR()
-        
-        if R <= 1 * pc:
-            pid = c.current.getId()
-            sn = c.getCreatedSerialNumber()
-            z = c.getRedshift()
-            
-            Z = chargeNumber(pid)
-            A = massNumber(pid)
-            
-            e = c.current.getEnergy() / eV
-            if R <= self.Dlim:
-                if (pid == self.injspec) and (sn not in self.sn_list): 
-                    self.fout.write(f'\n{sn:d} {Z:d} {A:d} {e:+5.4e} {z:7.6f} 0')
-                    self.sn_list.append(sn)
-            self.fout.write(f' {Z:d} {A:d} {e:+5.4e} 1.0')
-        
-    def close(self):
         self.fout.close()
 
 def run_1Dpropagation(Z, A, Nprim=10, zmin=0, zmax=2.5):
@@ -83,8 +73,7 @@ def run_1Dpropagation(Z, A, Nprim=10, zmin=0, zmax=2.5):
     # Defining the cosmological parameters: Ho=67.3 km/s/Mpc, OmegaM=0.3
     setCosmologyParameters(0.673, 0.3)
     
-    Injected_Species = nucleusId(A, Z)
-    Dmin, Dmax = redshift2ComovingDistance(zmin), redshift2ComovingDistance(zmax)
+    Dmin, Dmax = redshift2LightTravelDistance(zmin), redshift2LightTravelDistance(zmax)
     
     if Dmin == 0:
         Dmin = 1 * pc
@@ -110,14 +99,13 @@ def run_1Dpropagation(Z, A, Nprim=10, zmin=0, zmax=2.5):
     sim.add( ElectronPairProduction(IRB_Gilmore12()) )
     sim.add( MinimumEnergy(EeV) )
     
-    myoutput = Output_as_Simprop(f'CRPropa_{A:d}_{zmin:5.4f}_{zmax:5.4f}.txt', Injected_Species, Dmin-100*kpc) # use extension .gz
+    myoutput = Output_as_Simprop(f'CRPropa_{A:d}_{zmin:5.4f}_{zmax:5.4f}.txt')
     
     # observer to stop particles at origin
     obs = Observer()
     obs.add( ObserverPoint() )
+    obs.onDetection(myoutput)
     sim.add( obs )
-    
-    sim.add( myoutput )
     
     # source
     Emin = Z * 0.1 * EeV
@@ -129,10 +117,9 @@ def run_1Dpropagation(Z, A, Nprim=10, zmin=0, zmax=2.5):
     composition.add( A, Z, 1 ) 
     source.add( composition )
 
-
     # run simulation
     sim.setShowProgress(True)
-    sim.run(source, Nprim, True)
+    sim.run(source, Nprim, True, True)
 
 
 if __name__ == "__main__":

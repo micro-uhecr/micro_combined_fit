@@ -1,6 +1,6 @@
 import sys
 import numpy as np
-                        
+from tqdm import tqdm                        
 from crpropa import *
 
 def zbins(zmin = 0, zmax = 2.5, dz_min = 1E-4, dz_max = 0.5):
@@ -23,30 +23,47 @@ class Output_as_Simprop(Module):
         self.mom_list = []
         self.dau_list = []
 
-    def process(self, c):
-        pid = c.source.getId()
-        Z = chargeNumber(pid)
-        A = massNumber(pid)
-        E = c.source.getEnergy() / eV
-        z = lightTravelDistance2Redshift(c.source.getPosition().x)
-
-        mother = (Z, A, E, z)
-
+    def add_primary(self, c):
         if self.mom_list == []:
-            self.mom_list.append(mother)
+            pid = c.current.getId()
+            Zm = chargeNumber(pid)
+            Am = massNumber(pid)
+            Em = c.current.getEnergy() / eV
+            zm = lightTravelDistance2Redshift(c.source.getPosition().x)
+            sn = c.getSourceSerialNumber()
 
-        if mother not in self.mom_list:
-            self.fout.write(f'{len(self.mom_list):d} {Z:d} {A:d} {E:5.4e} {z:7.6f} {len(self.dau_list):d}')
-            
-            # write info of daughters belonging to previous nucleus
-            for Zd, Ad, Ed in list(sorted(set(self.dau_list))):
-                nd = self.dau_list.count((Zd, Ad, Ed))
-                self.fout.write(f' {Zd:d} {Ad:d} {Ed:+5.4e} {nd:d}')
-            self.fout.write('\n')
+            mother = (Zm, Am, Em, zm, sn)
 
             self.mom_list.append(mother)
-            self.dau_list = []
-            
+            return
+
+        Zm, Am, Em, zm, snm = self.mom_list[-1]
+        self.fout.write(f'{len(self.mom_list):d} {Zm:d} {Am:d} {Em:5.4e} {zm:7.6f} {len(self.dau_list):d}')
+        # self.fout.write(f'{snm:d} {Zm:d} {Am:d} {Em:5.4e} {zm:7.6f} {len(self.dau_list):d}')
+        
+        # write info of daughters belonging to previous nucleus
+        for Zd, Ad, Ed in list(sorted(set(self.dau_list))):
+            nd = self.dau_list.count((Zd, Ad, Ed))
+            self.fout.write(f' {Zd:d} {Ad:d} {Ed:+5.4e} {nd:d}')
+        self.fout.write('\n')
+        
+        sumA = sum([Ad for _, Ad, _, in self.dau_list])
+        if sumA > Am:
+            print(f'WARNING: Sum of daughters A {sumA} is greater than {Am}! Mother: {self.mom_list[-1]} @ line {len(self.mom_list)}')
+
+        pid = c.current.getId()
+        Zm = chargeNumber(pid)
+        Am = massNumber(pid)
+        Em = c.current.getEnergy() / eV
+        zm = lightTravelDistance2Redshift(c.source.getPosition().x)
+        sn = c.getSourceSerialNumber()
+
+        mother = (Zm, Am, Em, zm, sn)
+
+        self.mom_list.append(mother)
+        self.dau_list = []
+
+    def process(self, c):
         # Record daughter info
         pid = c.current.getId()
         Zd = chargeNumber(pid)
@@ -57,8 +74,9 @@ class Output_as_Simprop(Module):
         
     def close(self):
         # record the last set values
-        Z, A, E, z = self.mom_list[-1]
-        self.fout.write(f'{len(self.mom_list):d} {Z:d} {A:d} {E:5.4e} {z:7.6f} {len(self.dau_list):d}')
+        Zm, Am, Em, zm, snm = self.mom_list[-1]
+        self.fout.write(f'{len(self.mom_list):d} {Zm:d} {Am:d} {Em:5.4e} {zm:7.6f} {len(self.dau_list):d}')
+        # self.fout.write(f'{snm:d} {Zm:d} {Am:d} {Em:5.4e} {zm:7.6f} {len(self.dau_list):d}')
 
         # write info of daughters
         for Zd, Ad, Ed in list(sorted(set(self.dau_list))):
@@ -99,27 +117,28 @@ def run_1Dpropagation(Z, A, Nprim=10, zmin=0, zmax=2.5):
     sim.add( ElectronPairProduction(IRB_Gilmore12()) )
     sim.add( MinimumEnergy(EeV) )
     
-    myoutput = Output_as_Simprop(f'CRPropa_{A:d}_{zmin:5.4f}_{zmax:5.4f}.txt')
+    output_filename = f'CRPropa_{A:d}_{zmin:5.4f}_{zmax:5.4f}.txt'
+    myoutput = Output_as_Simprop(output_filename)
     
     # observer to stop particles at origin
     obs = Observer()
     obs.add( ObserverPoint() )
-    obs.onDetection(myoutput)
+    obs.onDetection( myoutput )
     sim.add( obs )
     
     # source
-    Emin = Z * 0.1 * EeV
-    Rmax = 1000 * EeV
-    source = Source()
-    source.add( SourceUniform1D(Dmin, Dmax) )
-    source.add( SourceRedshift1D() )
-    composition = SourceComposition(Emin, Rmax, -1) # flat spectrum with Emin=0.1*Z EeV and charge dependent maximum energy Z*1000 EeV
-    composition.add( A, Z, 1 ) 
-    source.add( composition )
-
-    # run simulation
-    sim.setShowProgress(True)
-    sim.run(source, Nprim, True, True)
+    for r1, r2 in tqdm(np.random.random((Nprim, 2))):
+        Energy = Z * EeV * 10**(-1 + 4*r1)
+        x = 10**(np.log10(Dmin) + r2*np.log10(Dmax/Dmin))
+        # create primary
+        cosmicray = Candidate(nucleusId(A, Z), Energy, Vector3d(x, 0, 0))
+        # record primary in output file
+        myoutput.add_primary(cosmicray)
+        # run primary
+        sim.run(cosmicray, True, True)
+        
+    print('Closing simulation file: {output_filename}')
+    myoutput.close()
 
 
 if __name__ == "__main__":

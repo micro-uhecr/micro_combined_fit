@@ -3,7 +3,7 @@ import numpy as np
 
 
 colors_Xmax = ['tab:red', 'tab:grey', 'tab:green', 'tab:blue']
-HIM_list = ["EPOS-LHC", "QGSJET-II04", "Sibyll2.3d"]
+HIM_list = ["EPOS-LHC", "QGSJET-II04", "Sibyll"]
 
 
 def getXRMS (lgE, meanVar_sh, VarLnA, model):

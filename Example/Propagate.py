@@ -17,12 +17,22 @@ from combined_fit import draw
 if __name__ == "__main__":
 
     plt.rcParams.update({'font.size': 14,'legend.fontsize': 12})
-    #Spectral parameters
-    logRcut = 18.25
-    gamma = -1.12
-    E_times_k=  np.dot([0.05,  0.36,  0.40,  0.18, 0.01], 3.7150108e+46)  # erg per solar mass
+    # best fit values SFR Spectral parameters
+    #logRcut_n = 18.28
+    #gamma_n = -0.88
+    #logRcut_p = 18.28
+    #gamma_p = 2.85
+    #E_times_k = [9.999999999943266e+46,   1.8499081186717069e+46,   1.9291523704992483e+46,   8.326664827209188e+45,   1.0000000000341408e+45]
+    #E_times_k=  np.dot([0.98,  0.01,  0.01,  0.0, 0.0], 1.0222631541615742e+46)  # erg per solar mass
 
-    model="Sibyll2.3d"
+    # best fit values SMD Spectral parameters
+    logRcut_n = 18.31
+    gamma_n = -0.0
+    logRcut_p = 18.31
+    gamma_p = 2.95
+    E_times_k= [ 9.999999999999408e+45,  2.126470897209981e+44,   9.3372424229318e+43 ,  5.164694985238282e+43 ,  1.000000000093353e+43]
+
+    model="Sibyll"
     E_th = 18.75 # Compute the deviance from this energy
 
     #Evolution
@@ -30,15 +40,22 @@ if __name__ == "__main__":
     flat = lambda z: SFRd(1) #Flat distribution of sources
     S_z =  SFRd # Can be changed to:  flat
 
-    w_R = lambda ZA, logR: sp.Spectrum_Energy(ZA, logR, gamma, logRcut)
+    f_z = ts.Load_evol_new(file = "smd_local.dat", key="smd") #uncomment these two lines if you want SMD
+    S_z = lambda z : 1/sp.dzdt(z)*f_z(z)
+
+    w_R_p = lambda ZA, logR: sp.Spectrum_Energy(ZA, logR, gamma_p, logRcut_p)
+    w_zR_p = lambda ZA, z, logR: w_R_p(ZA, logR)/sp.dzdt(z)*S_z(z)
+
+    w_R = lambda ZA, logR: sp.Spectrum_Energy(ZA, logR, gamma_n, logRcut_n)
     w_zR = lambda ZA, z, logR: w_R(ZA, logR)/sp.dzdt(z)*S_z(z)
+
     Tensor=[]
     Tensor = ts.upload_Tensor()
 
 
-    mass.Plot_fractions(Tensor, E_times_k, ts.A, ts.Z, w_zR, E_th, model="Sibyll2.3c")
-    sp.Plot_spectrum(Tensor, E_times_k, ts.A, ts.Z, w_zR, E_th)
-    mass.Plot_Xmax(Tensor,E_times_k,ts.A,ts.Z,w_zR,E_th, model = "Sibyll2.3d")
+    mass.Plot_fractions(Tensor, E_times_k, ts.A, ts.Z, w_zR,w_zR_p, E_th, model)
+    sp.Plot_spectrum(Tensor, E_times_k, ts.A, ts.Z, w_zR,w_zR_p, E_th)
+    mass.Plot_Xmax(Tensor,E_times_k,ts.A,ts.Z,w_zR,w_zR_p,E_th, model)
 
     '''xmax,exp_distributions = xmax_distr.set_Xmax_distr()
 

@@ -4,6 +4,8 @@ import numba as nb
 import pandas as pd
 import pathlib
 from scipy import interpolate
+from scipy.sparse import csr_matrix, csc_matrix
+from combined_fit import spectrum as sp
 
 from combined_fit import constant
 
@@ -16,7 +18,7 @@ Z    = [    1,     2,     7,    14,    26]
 
 
 #@nb.jit
-def upload_Tensor():
+def upload_Tensor(logEmin=1):
     '''Function which uploads the tensor
 
     Parameters
@@ -33,14 +35,14 @@ def upload_Tensor():
     Tensor =[]
     for i,a in enumerate(A):
         filename = os.path.join(COMBINED_FIT_BASE_DIR, '../Tensor/A_'+str(A[i])+'_z_'+str(zmax)+'.npz')
-        Tensor.append(CR_Table(filename, zmin, zmax))
+        Tensor.append(CR_Table(filename, zmin, zmax, logEmin=logEmin))
     return Tensor
 
 
 class CR_Table:
     ''' `CR_Table` is a class which allows to deal with the tensor
     '''
-    def __init__(self, filename, zmin, zmax, logEmin=18):
+    def __init__(self, filename, zmin, zmax, logEmin=1, logRmin=1):
         ''' `CR_Table` constructor
 
         Parameters
@@ -58,15 +60,17 @@ class CR_Table:
          '''
         t = np.load(filename)
         #Load variables from npz file
-        self.logRi = t['logRi']
-        self.z = t['z']
-        self.logE = t['logE']
-        self.ZA = t['ZA']
-        weights =  (self.logE>=logEmin)
-        self.tensor = np.zeros_like(t['tensor'])
-        self.tensor[:,:,:,weights] = t['tensor'][:,:,:,weights]
+        ind = find_nearest_Ri_bin(t['logE'], [logEmin,0])[0]+1
+        ind_Ri = np.max((find_nearest_Ri_bin(t['logRi'], [logRmin,0])[0]-1, 0))
 
-		#Define redshift bins for integration
+        self.logRi = t['logRi'][ind_Ri:]
+        self.z = t['z']
+        self.logE = t['logE'][ind:]
+        self.ZA = t['ZA']
+        self.tensor = t['tensor'][:,ind_Ri:,:,ind:]
+
+
+        #Define redshift bins for integration
         bins_z = []
         bins_z.append(zmin)
         for z in self.z:
@@ -81,16 +85,17 @@ class CR_Table:
         self.tensor_stacked = np.sum(self.tensor, axis=0)
 
         #Stacked over all A
-        uA = np.unique(za['A'])
-        A_list, stacked_A = [], []
-        for a in uA:
+        uA, idx = np.unique(za['A'], return_index=True)
+        A, stacked_A = [], []
+        for a in uA[idx]:
             sel = np.where(za['A'] == a)
             stacked_A.append(np.sum(self.tensor[sel], axis=0))
-            A_list.append(a)
+            A.append(a)
         self.tensor_stacked_A = np.array(stacked_A)
-        self.A = np.array(A_list)
+        self.A = np.array((A))
 
-		#Stacked over all Z
+
+        #Stacked over all Z
         uZ = np.unique(za['Z'])
         Z_list, stacked_Z = [], []
         for z in uZ:
@@ -129,6 +134,22 @@ class CR_Table:
             print("logR or z axis not found")
             return -1
 
+    def sum_logR_Given_z(self, a, bin_z, weights=[]):
+        iz = np.where(np.array(a.shape) == self.z.size)
+        iR = np.where(np.array(a.shape) == self.logRi.size)
+        omega = np.zeros_like(weights)
+        omega[:,bin_z] = weights[:,bin_z]
+
+        if((len(iz[0])==1) and (len(iR[0])==1)):
+            res = 0
+            if(len(omega)>0):
+                res = np.tensordot(a, omega, axes=([iR[0][0],iz[0][0]],[0,1]))
+            else:
+                res = np.sum(a, axis=[iz[0],iR[0]])
+            return res
+        else:
+            print("logR or z axis not found")
+
     def J_E(self, a, w_zR, ZA):
         ''' Create the expected spectrum given the parameters at the source
 
@@ -152,7 +173,15 @@ class CR_Table:
         return stacked_logR_z
 
 
-def Load_evol():
+    def Contract_Ri_Given_z(self, a, w_zR, ZA, bin_z):
+        zz, rr = np.meshgrid(self.z, self.logRi)
+        res = w_zR(ZA, zz, rr)
+        stacked_logR_Given_z = self.sum_logR_Given_z(a, bin_z, w_zR(ZA, zz, rr)*self.delta_z)
+
+        return stacked_logR_Given_z
+
+
+def Load_evol_old():
     ''' Load the chosen evolution of the source
 
     Parameters
@@ -168,5 +197,281 @@ def Load_evol():
     tz = pd.read_csv(file_sfrd, delimiter = " ")
     tz['sfrd'] *= (1/constant._Mpc_2_km)**2
     f_z = interpolate.interp1d( tz['z'], tz['sfrd'])
+
+    return f_z
+
+def Load_evol(file="sfrd_local.dat", zmin=2.33e-4, key ="sfrd"):
+    ''' Load the chosen evolution of the source
+
+    Parameters
+    ----------
+    file : `string`
+        name of the file in the folder Catalog which gives the evolution of sources
+    zmin : `float`
+        minimum distance for the evolution of source
+    key : `string`
+        Name of the column inside the file
+
+    Returns
+    -------
+    f_z : `function`
+        a f
+    '''
+
+    file = os.path.join(COMBINED_FIT_BASE_DIR, "../Catalog/" + file)
+    tz = pd.read_csv(file, delimiter = " ")
+    tz[key] *= (1/constant._Mpc_2_km)**2
+
+    if zmin>1e-10:
+        select = np.where(tz['z']<zmin)[0]
+
+        dist_up = tz["z"][select[-1]+1]-zmin
+        dist_down = zmin-tz[key][select[-1]]
+
+        value = (tz[key][select[-1]+1]* dist_down + tz[key][select[-1]]*dist_up)/(dist_up + dist_down)
+        tz[key][select] = 0
+
+        dist = np.append(np.array(tz['z']), zmin)
+        values = np.append(np.array(tz[key]), value)
+
+        dist = np.append(dist, 0)
+        values = np.append(values, 0)
+    else:
+        dist = np.append(np.array(tz['z']), tz['z'][0]-1e-10)
+        values = np.append(np.array(tz[key]), 0)
+        dist = np.append(dist, 0)
+        values = np.append(values, 0)
+
+
+    f_z = interpolate.interp1d( dist, values)
+
+    return f_z
+
+def find_nearest_Ri_bin(array, value):
+    ''' Give the nearest bin in array below the value for linear binning
+
+    Parameters
+    ----------
+    array : `array`
+        array considered
+    value : `float`
+
+    Returns
+    -------
+    idx : `int`
+        The index of the array
+    '''
+
+    idx = ((value-array[0])/(array[1]-array[0]))//1
+    wrg = np.where(idx<0)[0]
+    idx[wrg] = 0
+    wrg = np.where(idx>=len(array))[0]
+    idx[wrg] = len(array)-2
+    idx = idx.astype(int)
+    return idx
+
+def find_n_given_z(z, zmin = 0, zmax = 1, dzmin = 1E-4, dzmax = 5E-2):
+    ''' For a given z retun the nearest bin in the tensor below z
+
+    Parameters
+    ----------
+    z : `float`
+        reshift considered
+    zmin : `float`
+        value choosen in the `zbins` function in the file ShapeToTensor.py
+    zmax : `float`
+        value choosen in the `zbins` function in the file ShapeToTensor.py
+    dzmin : `float`
+        value choosen in the `zbins` function in the file ShapeToTensor.py
+    dzmax : `float`
+        value choosen in the `zbins` function in the file ShapeToTensor.py
+
+    Returns
+    -------
+    n : `int`
+        The index of the reshift vector in the tensor
+    '''
+
+    dz = lambda z: dzmin + dzmax*(z-zmin)/(zmax-zmin)
+    a = 1 + dzmax/(zmax-zmin)
+    b = dzmin - dzmax*zmin/(zmax-zmin)
+    n = (np.log((z - dz(z)/2 + b/(a-1))/(zmin + b/(a-1)))/np.log(a))//1
+    n = n.astype(int)
+
+    return n
+
+def Flux_Per_A_Detected(Tensor, E_times_k, bin_z, Z, w_zR):
+    ''' Return the flux EnergySpectrum for a given detected A
+
+    Parameters
+    ----------
+    Tensor : `Tensor`
+        tensor
+    E_times_k : `array`
+        array of side len(A)
+    bin_z : `array`
+        bin in reshift of the tensor
+    A : `array`
+        injected mass
+    Z : `array`
+        injected charge
+    w_zR : `function`
+        function that describes the injected spectrum
+
+    Returns
+    -------
+    stacked_A : `array`
+        The mass detected
+    stacked_Flux_tot : `array`
+        The flux detected for each mass A detected
+    '''
+
+    #Computation##################################
+    A = np.concatenate([Tensor[i].A for i in range(len(Z))])
+    je = np.array([Tensor[i].Contract_Ri_Given_z(Tensor[i].tensor_stacked_A, w_zR, Z[i], bin_z)/Tensor[i].delta_z[bin_z] for i in range(len(Z))])
+    Flux_tot = np.concatenate(E_times_k*je, axis=0)
+    EnergySpectrum = np.sum(Flux_tot, axis=1)
+
+    uA = np.unique(A)
+    A_arr, stacked_Flux_tot = [], []
+    for a in uA:
+        sel = np.where(A == a)
+        A_arr.append(a)
+        stacked_Flux_tot.append(np.sum(EnergySpectrum[sel], axis=0))
+
+    stacked_A = np.array(A_arr)
+
+    return stacked_A, stacked_Flux_tot
+
+def Compute_integrated_Flux(Tensor, E_times_k, Z, w_zR):
+    ''' Compute the total flux above a given energy
+
+    Parameters
+    ----------
+    Tensor : `Tensor`
+        tensor
+    E_times_k : `array`
+        array of side len(A)
+    A : `array`
+        injected mass
+    Z : `array`
+        injected charge
+    w_zR : `function`
+        function that describes the injected spectrum
+
+    Returns
+    -------
+    total_spectrum : `float`
+        Total flux
+    '''
+
+    #Computation##################################
+    models = []
+    for i in range(len(Z)):
+        je = Tensor[i].J_E(Tensor[i].tensor_stacked, w_zR, Z[i])
+        models.append([Tensor[i].logE , E_times_k[i]*je])
+
+    total_spectrum = []
+    logE = []
+    for i, m in enumerate(models):
+        logE, je = m[0], m[1]
+        total_spectrum.append(je)
+    total_spectrum = np.sum(np.array(total_spectrum))
+
+    return total_spectrum
+
+def Flux_Per_ZA_Energy_Detected(Tensor, E_times_k, bin_z, Z, w_zR):
+    ''' For a given z retun the nearest bin in
+    the tensor below z in a transient scenario
+
+    Parameters
+    ----------
+    Tensor : `Tensor`
+        tensor
+    E_times_k : `array`
+        array of side len(A)
+    bin_z : `array`
+        bin in reshift of the tensor
+    A : `array`
+        injected mass
+    Z : `array`
+        injected charge
+    w_zR : `function`
+        function that describes the injected spectrum
+
+    Returns
+    -------
+    A : `array`
+        The mass detected
+    EnergySpectrum : `array`
+        The flux detected for each mass A detected
+    '''
+
+    #Computation##################################
+    sel_A, sel_Z, sel_ZA, Flux = [], [], [], []
+
+    #Computation##################################
+    ZA = np.concatenate([Tensor[i].ZA for i in range(len(Z))])
+    je = np.array([Tensor[i].Contract_Ri_Given_z(Tensor[i].tensor_stacked_A, w_zR, Z[i], bin_z)/Tensor[i].delta_z[bin_z] for i in range(len(Z))])
+    Flux_tot = np.concatenate(E_times_k*je, axis=0)
+
+    uZA = np.unique(ZA)
+    ZA_arr, stacked_Flux_tot = [], []
+    for za in uZA:
+        sel = np.where(ZA == za)
+        ZA_arr.append(za)
+        stacked_Flux_tot.append(np.sum(Flux_tot[sel], axis=0))
+
+    stacked_Flux_tot = np.array(stacked_Flux_tot)
+    stacked_ZA = np.array(ZA_arr)
+
+    stacked_ZA = np.transpose([stacked_ZA]*Tensor[0].logE.size)
+
+    return stacked_ZA, stacked_Flux_tot
+
+def Load_evol_new(file="sfrd_local.dat", zmin=2.33e-4, key ="sfrd"):
+    ''' Load the chosen evolution of the source
+
+    Parameters
+    ----------
+    file : `string`
+        name of the file in the folder Catalog which gives the evolution of sources
+    zmin : `float`
+        minimum distance for the evolution of source
+    key : `string`
+        Name of the column inside the file
+
+    Returns
+    -------
+    f_z : `function`
+        a f
+    '''
+
+    file = os.path.join(COMBINED_FIT_BASE_DIR, "../Catalog/" + file)
+    tz = pd.read_csv(file, delimiter = " ")
+    tz[key] *= (1/constant._Mpc_2_km)**2
+
+    if zmin>1e-10:
+        select = np.where(tz['z']<zmin)[0]
+
+        dist_up = tz["z"][select[-1]+1]-zmin
+        dist_down = zmin-tz[key][select[-1]]
+
+        value = (tz[key][select[-1]+1]* dist_down + tz[key][select[-1]]*dist_up)/(dist_up + dist_down)
+        tz[key][select] = 0
+
+        dist = np.append(np.array(tz['z']), zmin)
+        values = np.append(np.array(tz[key]), value)
+
+        dist = np.append(dist, 0)
+        values = np.append(values, 0)
+    else:
+        dist = np.append(np.array(tz['z']), tz['z'][0]-1e-10)
+        values = np.append(np.array(tz[key]), 0)
+        dist = np.append(dist, 0)
+        values = np.append(values, 0)
+
+
+    f_z = interpolate.interp1d( dist, values)
 
     return f_z

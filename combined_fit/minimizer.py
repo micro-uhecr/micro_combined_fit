@@ -1,6 +1,6 @@
 import time
 import numpy as np
-from scipy import interpolate
+from scipy import interpolate, integrate
 from numba import jit
 
 from combined_fit import xmax_tools as xmax_tls
@@ -9,7 +9,7 @@ from combined_fit import mass
 
 
 @jit
-def Fractions_Minimization(parms, args, w_zR):
+def Fractions_Minimization(parms, args, w_zR, w_zR_p):
     ''' Performing the minimization of the mass fraction
     at the top of the atmosphere (lnA and sigma(lnA)).
 
@@ -36,19 +36,22 @@ def Fractions_Minimization(parms, args, w_zR):
     sel_A, fractions = [], []
 
     for i,a in enumerate(A):
-        je = t[i].J_E(t[i].tensor_stacked_A, w_zR, Z[i])
+        if (i ==0):
+            je = t[i].J_E(t[i].tensor_stacked_A, w_zR_p, Z[i])
+        else:
+            je = t[i].J_E(t[i].tensor_stacked_A, w_zR, Z[i])
         fractions.append(parms[i]*je/(10**t[i].logE))
         sel_A.append(t[i].A)
 
 
     logE = t[0].logE
-    StartingFrom = np.asscalar(np.argwhere(t_lnA['logE'] == E_th))
+    StartingFrom = np.ndarray.item((np.argwhere(t_lnA['logE'] == E_th)))
 
     A = np.concatenate(sel_A)
 
     frac_tot = np.concatenate(fractions, axis=0)
     place = np.argwhere(np.sum(frac_tot, axis=0) != 0)
-    index = np.asscalar(place[0])
+    index = np.ndarray.item((place[0]))
 
     frac_tot = frac_tot[:,index:]
     logE = logE[index:]
@@ -70,7 +73,7 @@ def Fractions_Minimization(parms, args, w_zR):
 
 
 @jit
-def Xmax_Minimization(parms, args, w_zR):
+def Xmax_Minimization(parms, args, w_zR,w_zR_p):
     ''' Compute the Xmax minimization
 
     Parameters
@@ -94,15 +97,18 @@ def Xmax_Minimization(parms, args, w_zR):
     E_th = args[5]
     model = args[6]
     #Computation##################################
-
     sel_A, fractions = [], []
 
     for i,a in enumerate(A):
-        je = t[i].J_E(t[i].tensor_stacked_A, w_zR, Z[i])
+        if (i ==0):
+            je = t[i].J_E(t[i].tensor_stacked_A, w_zR_p, Z[i])
+        else:
+            je = t[i].J_E(t[i].tensor_stacked_A, w_zR, Z[i])
+
         fractions.append(parms[i]*je/(10**t[i].logE))
         sel_A.append(t[i].A)
 
-    BinNumberXmax = np.asscalar(np.argwhere(np.around(xmax["meanLgE"], decimals=2)== E_th))
+    BinNumberXmax = np.ndarray.item((np.argwhere(np.around(xmax["meanLgE"], decimals=2)== E_th)))
 
     logE = t[0].logE
     A = np.concatenate(sel_A)
@@ -110,7 +116,7 @@ def Xmax_Minimization(parms, args, w_zR):
     frac_tot = np.concatenate(fractions, axis=0)
 
     place = np.argwhere(np.sum(frac_tot, axis=0) != 0)
-    index = np.asscalar(place[0])
+    index = np.ndarray.item((place[0]))
 
     frac_tot = frac_tot[:,index:]
     logE = logE[index:]
@@ -178,7 +184,7 @@ def Distr_Minimization(parms, args, w_zR):
 
 
 @jit
-def Spectrum_Minimization(parms, args, w_zR):
+def Spectrum_Minimization_p(parms, args, w_zR,w_zR_p):
     ''' Performing the minimization of the energy spectrum
 
     Parameters
@@ -201,10 +207,14 @@ def Spectrum_Minimization(parms, args, w_zR):
     T_J = args[3]
     E_th = args[5]
     #Computation##################################
-    models, sel_A = [], []
+    models, sel_A, frac = [], [], []
     for i, a in enumerate(A):
-        je = t[i].J_E(t[i].tensor_stacked, w_zR, Z[i])
+        if (i ==0):
+            je = t[i].J_E(t[i].tensor_stacked, w_zR_p, Z[i])
+        else:
+            je = t[i].J_E(t[i].tensor_stacked, w_zR, Z[i])
         models.append([t[i].logE,parms[i]*je/(10**t[i].logE * (t[i].logE[1]-t[i].logE[0]) * np.log(10))])
+        frac.append(parms[i])
         sel_A.append(a)
     #print("Elapsed time_1", end - start)
     spectrum_per_inj = []
@@ -212,16 +222,37 @@ def Spectrum_Minimization(parms, args, w_zR):
     for i, m in enumerate(models):
         logE, je = m[0], m[1]
         spectrum_per_inj.append(je)
-    total_spectrum = np.sum(np.array(spectrum_per_inj), axis=0)
-    interpolate_model = interpolate.interp1d(logE, total_spectrum)
+        #print(i, " index ", m, " second index ", je)
 
-    BinNumber = np.asscalar(np.argwhere(T_J['logE'] == E_th))
+    total_spectrum = np.sum(np.array(spectrum_per_inj), axis=0)
+    A_new, frac_new = mass.get_fractions_p(t,frac,A,Z,w_zR,w_zR_p)
+    frac_new = frac_new/np.sum(frac_new, axis=0)
+    A_red, frac_red = mass.reduced_fractions(A_new, np.transpose(frac_new),np.size(logE))
+
+    det_spectra = []
+
+    det_spectra = np.transpose(frac_red)*total_spectrum
+    interpolate_model = interpolate.interp1d(logE, total_spectrum)
+    interpol_data = interpolate.interp1d(T_J['logE'], T_J['J'])
+    #print("total_spectrum ", total_spectrum, " ", frac, " ", A, " ", Z)
+    BinNumber = np.ndarray.item((np.argwhere(T_J['logE'] == E_th)))
+    MaxE = np.max(T_J['logE'])
+    norm = integrate.quad(interpol_data, T_J['logE'][BinNumber], MaxE)[0]/integrate.quad(interpolate_model, T_J['logE'][BinNumber], MaxE)[0] # 1
     Dev = 0
     StartingFrom = BinNumber # Third point
-    Errors = (T_J['J_up'][StartingFrom:]-T_J['J_low'][StartingFrom:])/2
-    Dev = np.sum((T_J['J'][StartingFrom:]- interpolate_model(T_J['logE'][StartingFrom:]))**2/Errors**2) #
-
-    return Dev
+    Errors = (T_J['J_up'][StartingFrom:]+T_J['J_low'][StartingFrom:])/2
+    Dev = np.sum((T_J['J'][StartingFrom:]- interpolate_model(T_J['logE'][StartingFrom:])*norm)**2/Errors**2) #
+    #print("Dev ", Dev)
+    #exit()
+    exp_proton = sp.load_Spectrum_Proton()
+    proton_spectrum = exp_proton['Frac']*interpol_data(exp_proton['lgE'])
+    proton_error = exp_proton['Err']*interpol_data(exp_proton['lgE'])
+    BinNumber_p = 0 #  np.ndarray.item(np.argwhere(exp_proton['lgE'] == E_th))
+    interpolate_model_proton = interpolate.interp1d(logE, det_spectra[1])
+    Dev_p = np.sum((proton_spectrum[BinNumber_p:]- interpolate_model_proton(exp_proton['lgE'][BinNumber_p:])*norm)**2/proton_error[BinNumber_p:]**2) #
+    #print("Dev ", Dev , " Dev p ", Dev_p)
+    #exit()
+    return Dev+Dev_p
 
 
 def Minimize_Spectrum(parms, args):
@@ -268,23 +299,28 @@ def Minimize_Spectrum_And_Compo(parms, args, verbose = True):
     Deviance: 'float'
         return the sum of the deviance of spectrum and composition
     '''
-    logRcut = parms[-2]
-    gamma = parms[-1]
+    logRcut = parms[-3]
+    gamma = parms[-2]
+    gamma_p = parms[-1]
+
     S_z = args[-1]
     w_R = lambda ZA, logR: sp.Spectrum_Energy(ZA, logR, gamma, logRcut)
     w_zR = lambda ZA, z, logR: w_R(ZA, logR)/sp.dzdt(z)*S_z(z)
+    w_R_p = lambda ZA, logR: sp.Spectrum_Energy(ZA, logR, gamma_p, logRcut)
+    w_zR_p = lambda ZA, z, logR: w_R_p(ZA, logR)/sp.dzdt(z)*S_z(z)
+
     start = time.time()
-    Dev_fractions = Fractions_Minimization(parms, args, w_zR)
+    Dev_fractions = Fractions_Minimization(parms, args, w_zR, w_zR_p)
     end = time.time()
     #print("Elapsed time_C ", end - start)
     start = time.time()
-    Dev_Spectrum = Spectrum_Minimization(parms, args, w_zR)
+    Dev_Spectrum = Spectrum_Minimization_p(parms, args, w_zR, w_zR_p)
     end = time.time()
     #print("Elapsed time_S ", end - start)
     if verbose:
-        print("Spectrum deviance: ", np.around(Dev_Spectrum, decimals=2), " | Composition deviance: ", np.around(Dev_fractions, decimals=2))
-    #exit()
-    return Dev_fractions + Dev_Spectrum
+        print("Spectrum deviance: ", np.around(Dev_Spectrum, decimals=2), " | Composition deviance: ", np.around(Dev_fractions, decimals=2), "  | gamma: ", np.around(gamma, decimals=2), "  | logRcut : ", np.around(logRcut, decimals=2), "| gamma p ", np.around(gamma_p, decimals=2), " ", parms[0], " ", parms[1]," ", parms[2]," ", parms[3]," ", parms[4])
+    exit()
+    return  Dev_Spectrum+ Dev_fractions
 
 
 def Minimize_Spectrum_And_Xmax(parms, args, verbose = True):
@@ -304,24 +340,31 @@ def Minimize_Spectrum_And_Xmax(parms, args, verbose = True):
     Deviance: 'float'
         return the sum of the deviance of spectrum and Xmax
     '''
-    logRcut = parms[-2]
-    gamma = parms[-1]
+    logRcut = parms[-3]
+    gamma = parms[-2]
+    gamma_p = parms[-1]
+
     S_z = args[-1]
     w_R = lambda ZA, logR: sp.Spectrum_Energy(ZA, logR, gamma, logRcut)
     w_zR = lambda ZA, z, logR: w_R(ZA, logR)/sp.dzdt(z)*S_z(z)
+
+    w_R_p = lambda ZA, logR: sp.Spectrum_Energy(ZA, logR, gamma_p, logRcut)
+    w_zR_p = lambda ZA, z, logR: w_R_p(ZA, logR)/sp.dzdt(z)*S_z(z)
+
     #start = time.time()
-    Dev_fractions = Xmax_Minimization(parms, args, w_zR)
+    Dev_fractions = Xmax_Minimization(parms, args, w_zR, w_zR_p)
     #end = time.time()
     #print("Elapsed time_C ", end - start)
 
     #start = time.time()
-    Dev_Spectrum = Spectrum_Minimization(parms, args, w_zR)
+    Dev_Spectrum = Spectrum_Minimization_p(parms, args, w_zR,w_zR_p)
     #end = time.time()
     #print("Elapsed time_S ", end - start)
     #exit()
 
     if verbose:
-        print("Spectrum deviance: ", np.around(Dev_Spectrum, decimals=2), " | Composition deviance: ", np.around(Dev_fractions, decimals=2))
+        #print("Spectrum deviance: ", np.around(Dev_Spectrum, decimals=2), " | Composition deviance: ", np.around(Dev_fractions, decimals=2))
+        print("Spectrum deviance: ", np.around(Dev_Spectrum, decimals=2), " | Composition deviance: ", np.around(Dev_fractions, decimals=2), "  | gamma: ", np.around(gamma, decimals=2), "  | logRcut : ", np.around(logRcut, decimals=2), "| gamma p ", np.around(gamma_p, decimals=2), " ", parms[0], " ", parms[1]," ", parms[2]," ", parms[3]," ", parms[4])
     return Dev_fractions + Dev_Spectrum
 
 

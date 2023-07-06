@@ -1,4 +1,4 @@
-name: micro_combined_fit
+name: micro_combined_fit_test
 channels:
   - defaults
   - conda-forge  

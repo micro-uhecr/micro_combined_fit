@@ -13,7 +13,7 @@ from combined_fit import draw
 COMBINED_FIT_BASE_DIR = pathlib.Path(__file__).parent.resolve()
 
 ### whole functions ###
-def Plot_fractions(t,frac, A, Z, w_zR, E_fit, model="EPOS-LHC"):
+def Plot_fractions(t,frac, A, Z, w_zR,w_zR_p, E_fit, model="EPOS-LHC"):
     '''Compute the expected fractions, upload the experimental fractions, perform the deviance and plot the results
 
     Parameters
@@ -35,12 +35,12 @@ def Plot_fractions(t,frac, A, Z, w_zR, E_fit, model="EPOS-LHC"):
     -------
     None
     '''
-    logE, mean_A, sig2A_E = expected_lnA(t,frac,A,Z,w_zR) # expected lnA and sigma lnA
+    logE, mean_A, sig2A_E = expected_lnA(t,frac,A,Z,w_zR, w_zR_p) # expected lnA and sigma lnA
     Auger_lnA = load_lnA_Data(model) # experimental lnA for a given HIM
     compute_lnA_Deviance(logE, mean_A, sig2A_E, Auger_lnA, E_fit) # computation of deviance
     draw.draw_mass_fractions(logE, mean_A, sig2A_E, Auger_lnA, E_fit, model) # Plot
 
-def Plot_Xmax(t,frac,A,Z,w_zR,E_fit, model):
+def Plot_Xmax(t,frac,A,Z,w_zR,w_zR_p, E_fit, model):
     '''Compute the expected xmax mean and sigma, upload the experimental results, compute the deviance and plot both of them
 
     Parameters
@@ -62,12 +62,12 @@ def Plot_Xmax(t,frac,A,Z,w_zR,E_fit, model):
     -------
     None
         '''
-    logE,Xmax, RMS = expected_Xmax_sigmaXmax(t,frac,A,Z,w_zR, model)
+    logE,Xmax, RMS = expected_Xmax_sigmaXmax(t,frac,A,Z,w_zR,w_zR_p, model)
     Experimental_Xmax = load_Xmax_data()
     compute_Xmax_Deviance(logE, Xmax, RMS, Experimental_Xmax, E_fit) # computation of deviance
     draw.draw_Xmax(logE,Xmax, RMS,Experimental_Xmax, E_fit, model)
 
-def expected_lnA(t,frac,A,Z,w_zR):
+def expected_lnA(t,frac,A,Z,w_zR,w_zR_p):
     '''Compute the expected fractions
 
     Parameters
@@ -92,9 +92,9 @@ def expected_lnA(t,frac,A,Z,w_zR):
     '''
     logE = t[0].logE
 
-    A, frac_tot = get_fractions(t,frac,A,Z,w_zR)
+    A, frac_tot = get_fractions_p(t,frac,A,Z,w_zR,w_zR_p)
     place = np.argwhere(np.sum(frac_tot, axis=0) != 0)
-    index = np.asscalar(place[0])
+    index = np.ndarray.item(place[0])
 
     frac_tot = frac_tot[:,index:]
     logE = logE[index:]
@@ -106,7 +106,7 @@ def expected_lnA(t,frac,A,Z,w_zR):
     return logE, mean_A, V_A
 
 
-def expected_Xmax_sigmaXmax(t,frac,A,Z,w_zR,model):
+def expected_Xmax_sigmaXmax(t,frac,A,Z,w_zR,w_zR_p, model):
     '''Compute the expected xmax mean and sigma
 
     Parameters
@@ -133,9 +133,9 @@ def expected_Xmax_sigmaXmax(t,frac,A,Z,w_zR,model):
 '''
     logE = t[0].logE
 
-    A, frac_tot = get_fractions(t,frac,A,Z,w_zR)
+    A, frac_tot = get_fractions_p(t,frac,A,Z,w_zR, w_zR_p)
     place = np.argwhere(np.sum(frac_tot, axis=0) != 0)
-    index = np.asscalar(place[0])
+    index = np.ndarray.item(place[0])
 
     frac_tot = frac_tot[:,index:]
     logE = logE[index:]
@@ -181,7 +181,7 @@ def compute_lnA_Deviance(logE, mean_A, V_A, t_lnA, E_fit):
     -------
     None
     '''
-    StartingFrom = np.asscalar(np.argwhere(t_lnA['logE'] == E_fit))
+    StartingFrom = np.ndarray.item(np.argwhere(t_lnA['logE'] == E_fit))
 
     avA_E = interpolate.interp1d(logE, mean_A)
     sig2A_E = interpolate.interp1d(logE, V_A)
@@ -213,7 +213,7 @@ def compute_Xmax_Deviance(logE, Xmax, RMS, experimental_xmax, E_fit):
     XmaxMean_E = interpolate.interp1d(logE, Xmax)
     RMS_E = interpolate.interp1d(logE, RMS)
 
-    BinNumberXmax = np.asscalar(np.argwhere(np.around(experimental_xmax['meanLgE'], decimals=2)== E_fit))
+    BinNumberXmax = np.ndarray.item(np.argwhere(np.around(experimental_xmax['meanLgE'], decimals=2)== E_fit))
 
     Dev = np.sum(( experimental_xmax['fXmax'][BinNumberXmax:] - XmaxMean_E(experimental_xmax['meanLgE'][BinNumberXmax:]) )**2/ experimental_xmax['statXmax'][BinNumberXmax:]**2)
     Dev += np.sum(( experimental_xmax['fRMS'][BinNumberXmax:] - RMS_E(experimental_xmax['meanLgE'][BinNumberXmax:]) )**2 / experimental_xmax['statRMS'][BinNumberXmax:]**2)
@@ -247,7 +247,7 @@ def compute_Distr_Deviance(A, frac,meanLgE, exp_distributions_x, exp_distributio
     None
     '''
     Dev = 0
-    BinNumberXmax = np.asscalar(np.argwhere(np.around(meanLgE, decimals=2)== E_th))
+    BinNumberXmax = np.ndarray.item(np.argwhere(np.around(meanLgE, decimals=2)== E_th))
 
     for i in range(BinNumberXmax, len(meanLgE)):
         sum = np.zeros((len(A),len(exp_distributions_x[i])))
@@ -292,7 +292,7 @@ def get_fractions_distributions(t,frac,A,Z,w_zR, xmax):
 
     frac_tot = np.transpose(frac_tot)
 
-    start = np.asscalar(np.argwhere(t[0].logE == np.around(xmax['meanlgE'][0], decimals = 2)))
+    start = np.ndarray.item(np.argwhere(t[0].logE == np.around(xmax['meanlgE'][0], decimals = 2)))
 
     frac_def = np.zeros((len(xmax['maxlgE']),len(A)))
 
@@ -340,6 +340,45 @@ def get_fractions(t,frac,A,Z,w_zR):
     frac_tot = np.concatenate(fractions, axis=0)
     return A, frac_tot
 
+def get_fractions_p(t,frac,A,Z,w_zR, w_zR_p):
+    '''Provide the mass fraction at the top of the atmosphere for a given choice of the parameters at the source
+
+    Parameters
+    ----------
+    t : `tensor`
+        upload tensor for the extra-galactic propagation
+    frac : `list`
+        fractions at the top of the atmosphere
+    A,Z: `list`
+        Mass and charge of the injected particles
+    w_zR : `list`
+        log Rigidity of the injected particles
+    xmax: `Table`
+        experimental xmax moments
+
+    Returns
+    -------
+    A: `list`
+        Mass at the top of the atmosphere
+    frac_def: `list`
+        Mass fractions at the top of the atmosphere
+                #if (i == 0):
+                    #je = t[i].J_E(t[i].tensor_stacked, w_zR_p, Z[i])
+                #else:
+    '''
+    sel_A, fractions = [], []
+    for i,a in enumerate(A):
+        if (i == 0):
+            je = t[i].J_E(t[i].tensor_stacked_A, w_zR_p, Z[i])
+        else:
+            je = t[i].J_E(t[i].tensor_stacked_A, w_zR, Z[i])
+        fractions.append(frac[i]*je/(10**t[i].logE))
+        sel_A.append(t[i].A)
+
+    A = np.concatenate(sel_A)
+    frac_tot = np.concatenate(fractions, axis=0)
+    return A, frac_tot
+
 def reduced_fractions(A_old, frac_old,size):
     '''Reduce the mass fraction to a 56 size for all the energies
 
@@ -358,14 +397,14 @@ def reduced_fractions(A_old, frac_old,size):
     frac: `list`
         Mass fractions at the top of the atmosphere  (56)
     '''
+
     A = np.zeros(56)
     frac = np.zeros((size,56))
     for j in range (size):
-        for i,a in enumerate(A_old):
-            index = int(A_old[i])
-            A[index-1] = index
-            frac[j][index-1] += frac_old[j][i]
-
+        for i,a in enumerate(A):
+            #index = int(A_old[i])
+            #A[index-1] = index
+            frac[j][i] = np.sum(frac_old[j][np.where(A_old ==i)])
 
     return A, frac
 
@@ -387,7 +426,7 @@ def load_lnA_Data(model="EPOS-LHC"):
     filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Public_data/lnA/')
     if model=="EPOS-LHC":
         return Table.read(filename+'lnA_EPOS-LHC', format='ascii.basic', delimiter=" ", guess=False)
-    elif model=="Sibyll2.3c":
+    elif model=="Sibyll":
         return Table.read(filename+'lnA_Sibyll2.3c', format='ascii.basic', delimiter=" ", guess=False)
     else:
         print("Wrong model in load_lnA_Data")

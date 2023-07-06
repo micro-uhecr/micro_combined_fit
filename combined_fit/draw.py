@@ -35,7 +35,7 @@ def draw_mass_fractions(logE, mean_A, V_A, t_lnA, E_fit, model):
 
     avA_E = interpolate.interp1d(logE, mean_A)
     sig2A_E = interpolate.interp1d(logE, V_A)
-    BinNumber = np.asscalar(np.argwhere(logE == E_fit))
+    BinNumber = np.ndarray.item(np.argwhere(logE == E_fit))
     #Show <ln A> et V(ln A)
     fig = plt.subplots(figsize=(10, 4), nrows=1, ncols = 2)
 
@@ -121,7 +121,7 @@ def Plot_Xmax_distribution(Tensor,frac,A,Z,w_zR,E_th,xmax, model, exp_distributi
 
         if xmax['maxlgE'][i] > E_th: points +=(np.sum(np.multiply(idk,1)))
         Dev = xmax_distr.deviance_Xmax_distr(data,final, xmax['nEntries'][i])
-        print(xmax['meanlgE'][i], " ", Dev, " ", points)
+        #print(xmax['meanlgE'][i], " ", Dev, " ", points)
 
         x = np.arange(0,2000,dx)
         min = int((np.min(exp_distributions_x[i])-(dx/2))/dx)
@@ -173,6 +173,7 @@ def Draw_spectrum(A,logE, expected_spectrum, spectrum_per_inj, norm,E_fit):
         '''
     power_repr = 3
     experimental_spectrum = sp.load_Spectrum_Data()
+    exp_proton = sp.load_Spectrum_Proton()
     fig = plt.subplots(figsize=(8, 4), nrows=1, ncols = 1)
 
     plt.tight_layout(pad=3, w_pad=2, h_pad=2)
@@ -187,19 +188,183 @@ def Draw_spectrum(A,logE, expected_spectrum, spectrum_per_inj, norm,E_fit):
 
     Espec = np.power(10,experimental_spectrum['logE'])#eV
     Data_spectrum = experimental_spectrum['J']#/Espec*(1e3)**2*365.25*24*3600
-    Data_Err_up = experimental_spectrum['J_low']#/Espec*(1e3)**2*365.25*24*3600
-    Data_Err_low = experimental_spectrum['J_up']#/Espec*(1e3)**2*365.25*24*3600
+    Data_Err_up = experimental_spectrum['J_up']#/Espec*(1e3)**2*365.25*24*3600
+    Data_Err_low = experimental_spectrum['J_low']#/Espec*(1e3)**2*365.25*24*3600
+    interpol_data = interpolate.interp1d(experimental_spectrum['logE'], experimental_spectrum['J'])
+
+    Espec_prot = np.power(10,exp_proton['lgE'])#eV
+    proton_spectrum = exp_proton['Frac']*interpol_data(exp_proton['lgE'])
+    proton_error = exp_proton['Err']*interpol_data(exp_proton['lgE'])
+    plt_proton_spectrum = Espec_prot**power_repr*proton_spectrum
+    plt_Data_Err_proton = Espec_prot**power_repr*proton_error
+    BinNumber_p =  np.ndarray.item(np.argwhere(exp_proton['lgE'] == E_fit))
+
 
     plt_Data_spectrum = Espec**power_repr*Data_spectrum
-    plt_Data_Err_up = Espec**power_repr*Data_Err_up-plt_Data_spectrum
-    plt_Data_Err_low = plt_Data_spectrum-Espec**power_repr*Data_Err_low
+    plt_Data_Err_up = Espec**power_repr*Data_Err_up#-plt_Data_spectrum
+    #plt_Data_Err_low = plt_Data_spectrum-Espec**power_repr*Data_Err_low
+    plt_Data_Err_low = Espec**power_repr*Data_Err_low
     plt_Data_Err = [plt_Data_Err_low, plt_Data_Err_up]
-    BinNumber = np.asscalar(np.argwhere(logE == E_fit))
+    BinNumber =  np.ndarray.item(np.argwhere(logE == E_fit))
+    #print(plt_Data_Err_up, " ", plt_Data_Err_low)
 
     plt.errorbar(experimental_spectrum['logE'], plt_Data_spectrum, yerr=plt_Data_Err, fmt='o',  mfc='none', color='k', label = "Auger")
+    plt.errorbar(exp_proton['lgE'][:BinNumber_p], plt_proton_spectrum[:BinNumber_p], yerr=plt_Data_Err_proton[:BinNumber_p], fmt='o',  mfc='none', color='tab:red', label = "protons")
+
     for i,e in enumerate(spectrum_per_inj):
         e = np.power(10.,logE)
         plt.plot(logE, e**power_repr*norm*spectrum_per_inj[i], label = 'A = '+str(A[i]), color=constant.colors[i])
+    e = np.power(10.,logE)
+    plt.plot(logE, e**power_repr*norm*expected_spectrum, label="low-E exptrapolation", color='tab:brown', linestyle='--')
+    plt.plot(logE[BinNumber:], e[BinNumber:]**power_repr*norm*expected_spectrum[BinNumber:], label="best-fit model", color='tab:brown')
+
+    #plt.ylim(1E23,3E24)
+    plt.yscale('log')
+    plt.legend(fontsize=12)
+
+def Draw_spectrum_inj(A,logE, expected_spectrum, spectrum_per_inj, norm,E_fit):
+    ''' Plot the expected and the experimental spectrum above the threshold energy
+
+    Parameters
+    ----------
+    A : `list`
+        mass of injected particles
+    logE : `list`
+        list of  energy bins as stored in the tensor
+    expected_spectrum: `list`
+        total expected spectrum at the top of the atmosphere
+    spectrum_per_inj: `list`
+        total expected spectrum at the top of the atmosphere
+    norm : `float`
+        normalization of the expected spectrum
+    E_fit : `float`
+        Energy bin from which the deviance is computed
+
+    Returns
+    -------
+    None
+        '''
+    power_repr = 0
+    experimental_spectrum = sp.load_Spectrum_Data()
+    exp_proton = sp.load_Spectrum_Proton()
+    fig = plt.subplots(figsize=(8, 4), nrows=1, ncols = 1)
+
+    plt.tight_layout(pad=3, w_pad=2, h_pad=2)
+    plt.subplots_adjust(bottom = 0.16,top = 0.9)
+
+    plt.subplot(111)
+    plt.xlabel(r'Energy, log$_{10} E$ [eV]')
+    plt.ylabel(r'$E^3 J(E)$ [eV$^{2}\,$km$^{-2}\,$yr$^{-1}\,$sr$^{-1}\,$]')
+    plt.xlim(17.3,lEmax)
+    plt.yscale('log')
+
+    Espec = np.power(10,experimental_spectrum['logE'])#eV
+    Data_spectrum = experimental_spectrum['J']#/Espec*(1e3)**2*365.25*24*3600
+    Data_Err_up = experimental_spectrum['J_up']#/Espec*(1e3)**2*365.25*24*3600
+    Data_Err_low = experimental_spectrum['J_low']#/Espec*(1e3)**2*365.25*24*3600
+    interpol_data = interpolate.interp1d(experimental_spectrum['logE'], experimental_spectrum['J'])
+
+    Espec_prot = np.power(10,exp_proton['lgE'])#eV
+    proton_spectrum = exp_proton['Frac']*interpol_data(exp_proton['lgE'])
+    proton_error = exp_proton['Err']*interpol_data(exp_proton['lgE'])
+    plt_proton_spectrum = Espec_prot**power_repr*proton_spectrum
+    plt_Data_Err_proton = Espec_prot**power_repr*proton_error
+    BinNumber_p =  np.ndarray.item(np.argwhere(exp_proton['lgE'] == E_fit))
+
+
+    plt_Data_spectrum = Espec**power_repr*Data_spectrum
+    plt_Data_Err_up = Espec**power_repr*Data_Err_up#-plt_Data_spectrum
+    #plt_Data_Err_low = plt_Data_spectrum-Espec**power_repr*Data_Err_low
+    plt_Data_Err_low = Espec**power_repr*Data_Err_low
+    plt_Data_Err = [plt_Data_Err_low, plt_Data_Err_up]
+    BinNumber =  np.ndarray.item(np.argwhere(logE == E_fit))
+    #print(plt_Data_Err_up, " ", plt_Data_Err_low)
+
+
+    for i,e in enumerate(spectrum_per_inj):
+        e = np.power(10.,logE)
+        plt.plot(logE, e**power_repr*norm*spectrum_per_inj[i], label = 'A = '+str(A[i]), color=constant.colors[i])
+    e = np.power(10.,logE)
+    plt.plot(logE, e**power_repr*norm*expected_spectrum, label="low-E exptrapolation", color='tab:brown', linestyle='--')
+    plt.plot(logE[BinNumber:], e[BinNumber:]**power_repr*norm*expected_spectrum[BinNumber:], label="best-fit model", color='tab:brown')
+
+    #plt.ylim(1E23,3E24)
+    plt.yscale('log')
+    plt.legend(fontsize=12)
+
+def Draw_spectrum_det(A,logE, expected_spectrum, spectrum_det, norm,E_fit):
+    ''' Plot the expected and the experimental spectrum above the threshold energy
+
+    Parameters
+    ----------
+    A : `list`
+        mass of injected particles
+    logE : `list`
+        list of  energy bins as stored in the tensor
+    expected_spectrum: `list`
+        total expected spectrum at the top of the atmosphere
+    spectrum_per_inj: `list`
+        total expected spectrum at the top of the atmosphere
+    norm : `float`
+        normalization of the expected spectrum
+    E_fit : `float`
+        Energy bin from which the deviance is computed
+
+    Returns
+    -------
+    None
+        '''
+    power_repr = 3
+    experimental_spectrum = sp.load_Spectrum_Data()
+    exp_proton = sp.load_Spectrum_Proton()
+    fig = plt.subplots(figsize=(8, 4), nrows=1, ncols = 1)
+
+    plt.tight_layout(pad=3, w_pad=2, h_pad=2)
+    plt.subplots_adjust(bottom = 0.16,top = 0.9)
+
+    plt.subplot(111)
+    plt.xlabel(r'Energy, log$_{10} E$ [eV]')
+    plt.ylabel(r'$E^3 J(E)$ [eV$^{2}\,$km$^{-2}\,$yr$^{-1}\,$sr$^{-1}\,$]')
+    plt.xlim(17.3,lEmax)
+    plt.ylim(1e36,1e38)
+    plt.yscale('log')
+
+    Espec = np.power(10,experimental_spectrum['logE'])#eV
+    Data_spectrum = experimental_spectrum['J']#/Espec*(1e3)**2*365.25*24*3600
+    Data_Err_up = experimental_spectrum['J_up']#/Espec*(1e3)**2*365.25*24*3600
+    Data_Err_low = experimental_spectrum['J_low']#/Espec*(1e3)**2*365.25*24*3600
+    interpol_data = interpolate.interp1d(experimental_spectrum['logE'], experimental_spectrum['J'])
+
+    Espec_prot = np.power(10,exp_proton['lgE'])#eV
+    proton_spectrum = exp_proton['Frac']*interpol_data(exp_proton['lgE'])
+    proton_error = exp_proton['Err']*interpol_data(exp_proton['lgE'])
+    #print(proton_spectrum, " ", proton_error)
+    plt_proton_spectrum = Espec_prot**power_repr*proton_spectrum
+    plt_Data_Err_proton = Espec_prot**power_repr*proton_error
+    BinNumber_p =  np.ndarray.item(np.argwhere(exp_proton['lgE'] == E_fit))
+
+
+    plt_Data_spectrum = Espec**power_repr*Data_spectrum
+    plt_Data_Err_up = Espec**power_repr*Data_Err_up#-plt_Data_spectrum
+    #plt_Data_Err_low = plt_Data_spectrum-Espec**power_repr*Data_Err_low
+    plt_Data_Err_low = Espec**power_repr*Data_Err_low
+    plt_Data_Err = [plt_Data_Err_low, plt_Data_Err_up]
+    BinNumber =  np.ndarray.item(np.argwhere(logE == E_fit))
+    #print(plt_Data_Err_up, " ", plt_Data_Err_low)
+    det_spectra_fin = []
+    det_spectra_fin.append(spectrum_det[1])
+    det_spectra_fin.append(np.sum(spectrum_det[2:4], axis =0))
+    det_spectra_fin.append(np.sum(spectrum_det[5:22], axis =0))
+    det_spectra_fin.append(np.sum(spectrum_det[23:38], axis =0))
+    det_spectra_fin.append(np.sum(spectrum_det[39:56], axis =0))
+
+
+
+    plt.errorbar(experimental_spectrum['logE'], plt_Data_spectrum, yerr=plt_Data_Err, fmt='o',  mfc='none', color='k', label = "Auger")
+    plt.errorbar(exp_proton['lgE'][:BinNumber_p], plt_proton_spectrum[:BinNumber_p], yerr=plt_Data_Err_proton[:BinNumber_p], fmt='o',  mfc='none', color='tab:red', label = "protons")
+    for i,e in enumerate(det_spectra_fin):
+        e = np.power(10.,logE)
+        plt.plot(logE, e**power_repr*norm*det_spectra_fin[i],  color=constant.colors[i], label = str(constant.lGroupLow[i])+"$\geq$ A $\leq$"+ str(constant.lGroupUp[i]))
     e = np.power(10.,logE)
     plt.plot(logE, e**power_repr*norm*expected_spectrum, label="low-E exptrapolation", color='tab:brown', linestyle='--')
     plt.plot(logE[BinNumber:], e[BinNumber:]**power_repr*norm*expected_spectrum[BinNumber:], label="best-fit model", color='tab:brown')
@@ -274,7 +439,7 @@ def draw_Xmax(logE,Xmax, RMS,experimental_xmax, E_fit, model):
     diffE1 = np.subtract(experimental_xmax["meanLgE"],minLgE)
     diffE2 = np.subtract(maxLgE, experimental_xmax["meanLgE"])
 
-    BinNumber = np.asscalar(np.argwhere(logE == E_fit))
+    BinNumber = np.ndarray.item(np.argwhere(logE == E_fit))
     plt.subplot(121)
     plt.errorbar(experimental_xmax["meanLgE"], experimental_xmax["fXmax"], fmt='o',yerr =[experimental_xmax["statXmax"],experimental_xmax["statXmax"]], xerr =[diffE1,diffE2], mfc='none', color = 'black')
 

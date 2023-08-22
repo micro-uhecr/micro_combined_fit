@@ -1,9 +1,10 @@
 import sys
 import numpy as np
 
-
 colors_Xmax = ['tab:red', 'tab:grey', 'tab:green', 'tab:blue']
 HIM_list = ["EPOS-LHC", "QGSJET-II04", "Sibyll"]
+
+_sysXmax = 8#g/cm2
 
 
 def getXRMS (lgE, meanVar_sh, VarLnA, model):
@@ -29,12 +30,14 @@ def getXRMS (lgE, meanVar_sh, VarLnA, model):
     D = par[1]
     csi = par[2]
     delta = par[3]
+    
     fE = csi - D/np.log(10) + delta * (lgE - 19.)
     Var = meanVar_sh + fE * fE * VarLnA
+    
     return np.sqrt(Var)
 
 
-def getXmax (lgE, lnA, model):
+def getXmax (lgE, lnA, model, sigma_shift_sys=0):
     ''' This function provides the mean Xmax
 
     Parameters
@@ -45,7 +48,9 @@ def getXmax (lgE, lnA, model):
         lnA
     model : `string`
         hadronic interaction model
-
+    sigma_shift_sys: `float`
+        shift of the model by nsigma_sys
+        
     Returns
     -------
     vXmax: 'float'
@@ -62,7 +67,7 @@ def getXmax (lgE, lnA, model):
 
     vXmax = Xmaxp + fE * lnA
 
-    return vXmax
+    return vXmax + sigma_shift_sys*_sysXmax
 
 
 def getParX (model):
@@ -128,7 +133,7 @@ def getParS(model):
 
     Returns
     -------
-    np.sqrt(Var): 'list'
+    p: 'list'
         Parameters for the chosen HIM
     '''
     pS = [3.72671955e+03, -4.83807008e+02, 1.32476965e+02, -4.05484134e-01, -2.53645381e-04, 4.74942981e-02] # parameter sibyll2.3d
@@ -175,27 +180,5 @@ def  getVar_sh (lgE, lnA, model):
     b = par[5]
 
     variance = Vp * (1 + a * lnA + b * lnA * lnA)
+    
     return variance
-
-
-def gaussian(x, mu, sig):
-    ''' Simple gaussian function
-
-    Parameters
-    ----------
-    x : `float`
-        value
-    mu : `float`
-        mean
-    sig : `float`
-        sigma
-
-    Returns
-    -------
-    value: 'float'
-        value of the gaussian function at x
-    '''
-    if sig == 0:
-        return 1.e30
-    arg = (x-mu)/sig
-    return np.exp(-0.5*arg*arg)/(2.50662827463100024*sig)

@@ -1,9 +1,9 @@
 name: micro_combined_fit_test
 channels:
   - defaults
-  - conda-forge  
+  - conda-forge
 dependencies:
-  - astropy
+  - astropy>=5.2
   - matplotlib
   - numpy
   - pandas
@@ -14,3 +14,5 @@ dependencies:
   - setuptools
   - numba
   - zstandard
+  - tqdm
+  - healpy

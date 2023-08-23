@@ -8,3 +8,5 @@ jupyterlab
 setuptools
 numba
 zstandard
+tqdm
+healpy

@@ -109,7 +109,7 @@ if __name__ == "__main__":
 	elif smooth=="top-hat": tex_ang = r"\Psi"
 	Eth = np.around(np.power(10,logEth-18)).astype(int)
 	norm_fact_title = 1E3
-	color_bar_title = r"$\Phi_{\rm"+ key +r"}(>" + str(Eth) + r"\, {\rm EeV},\, "+tex_ang+" = "+ str(radius) +r"$°)"+ r"  $[10^{-3}\ \rm km^{-2}\, yr^{-1}\, sr^{-1}]$"
+	color_bar_title = r"$\Phi_{\rm "+ key +r"}(>" + str(Eth) + r"\, {\rm EeV},\, "+tex_ang+" = "+ str(radius) +r"$°)"+ r"  $[10^{-3}\ \rm km^{-2}\, yr^{-1}\, sr^{-1}]$"
 	title = text_k+", "+text_deflection+r" ($B_{\rm LS} ="+str(constant.B_LGMF_nG) +r"\,$nG)"
 
 	#Plot

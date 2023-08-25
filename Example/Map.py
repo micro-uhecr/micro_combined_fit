@@ -5,11 +5,12 @@ import matplotlib.pyplot as plt
 from astropy.table import Table
 import healpy as hp
 from scipy import interpolate
+import os
 
 from combined_fit import spectrum as sp
 from combined_fit import tensor as ts
 from combined_fit import constant, map, draw
-
+#os.environ['KMP_DUPLICATE_LIB_OK']='True'
 #TBD: implement another version of the code in the steady-state regime
 ### Main ##########################################################
 if __name__ == "__main__":

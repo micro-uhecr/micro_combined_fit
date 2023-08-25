@@ -3,12 +3,12 @@ channels:
   - defaults
   - conda-forge
 dependencies:
-  - astropy>=5.2
+  - astropy>=5.3.1
   - matplotlib
   - numpy
   - pandas
   - python>=3.9
-  - scipy
+  - scipy>=1.5
   - iminuit
   - jupyterlab
   - setuptools
@@ -16,3 +16,4 @@ dependencies:
   - zstandard
   - tqdm
   - healpy
+  - nomkl

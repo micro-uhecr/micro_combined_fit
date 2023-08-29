@@ -9,7 +9,7 @@ from scipy import interpolate
 from astropy.table import Table
 from astropy.coordinates import SkyCoord, ICRS, Galactic
 
-from combined_fit import constant, draw
+from combined_fit import constant, draw, utilities
 from combined_fit import spectrum as sp
 
 # This gives the combined_fit/combined_fit directory
@@ -228,8 +228,8 @@ def MapToHealpyCoord(galCoord, l, b):
 	if(not galCoord): # If equatorial coordinates
 		phi -= np.pi
 	return phi, theta
-	
-	
+
+
 def HealpyCoordToMap(galCoord, phi, theta):
 	''' Convert Healpy coordiantes into RA/DEC or
 	lonGalactic/latGalactic
@@ -242,7 +242,7 @@ def HealpyCoordToMap(galCoord, phi, theta):
 		Phi healpy coordinates
 	theta : `float or numpy array`
 		Theta healpy coordinates
-		
+
 	Returns
 	-------
 	l : `float or numpy array`
@@ -251,11 +251,11 @@ def HealpyCoordToMap(galCoord, phi, theta):
 		Declination or galactic latitude
 
 	'''
-	 
+
 	b = np.pi/2 - theta
 	l = phi
 	if(not galCoord): # If equatorial coordinates: l+π, projected to [0, 2*π]
-		l = np.where(l < np.pi, l + np.pi, l - np.pi) 
+		l = np.where(l < np.pi, l + np.pi, l - np.pi)
 	return l, b
 
 
@@ -323,7 +323,7 @@ def LoadSmoothedMap(hp_map, radius_deg, nside, smoothing="fisher"):
 
 	smoothed_map = hp.smoothing(hp_map, beam_window=beam_function(radius, nside))
 	smoothed_map = smoothed_map*np.sum(hp_map)/np.sum(smoothed_map)
-	
+
 	return smoothed_map
 
 
@@ -363,7 +363,7 @@ def load_Catalog(galCoord=True, Dmin=1, Dmax=350, tracer="logSFR"):
 	choosen_Galaxies = (t['d']<=Dmax)*(t['d']>=Dmin)
 	tsel = t[choosen_Galaxies]
 	name = tsel['name']
-	
+
 	#Coordinates
 	dist = tsel['d']
 	if galCoord: l, b = tsel['glon'], tsel['glat']
@@ -371,9 +371,9 @@ def load_Catalog(galCoord=True, Dmin=1, Dmax=350, tracer="logSFR"):
 
 	#Flux
 	if tracer == "logSFR": key_corr = 'cNs'
-	else: key_corr = 'cNm' 
+	else: key_corr = 'cNm'
 	tracer_of_UHECR = np.power(10, tsel[tracer])/tsel[key_corr]
-	
+
 	return name, dist, l, b, tracer_of_UHECR
 
 
@@ -400,12 +400,12 @@ def load_Map_from_Catalog(galCoord, nside, l, b, weights_galaxies):
 	flux_map : `numpy array`
 		flux_map in a Healpy format, units are arbitrary
 	'''
-	
+
 	# find the pixel for each galaxy
 	phi_gal, theta_gal = MapToHealpyCoord(galCoord, np.radians(l), np.radians(b))
 	index_gal = hp.ang2pix(nside, theta_gal, phi_gal)
 	npix = hp.nside2npix(nside)
-	
+
 	# sum over selections
 	flux_maps = []
 	cum_sumR, cum_weight = 0, 0
@@ -432,10 +432,10 @@ def map_arbitrary_units_all_galaxies(galaxy_parameters, tensor_parameters, k_tra
 	name, dist, l, b, lum = galaxy_parameters
 	Tensor, E_times_k, A, Z, logRcut, gamma_nucl, gamma_p = tensor_parameters
 	weights_galaxies = []
-	
+
 	# select the galaxies beyond 1 Mpc
 	sel = dist>1
-	
+
 	# load spectral model for all galaxies
 	w_R = lambda Z, logR: sp.Spectrum_Energy(Z, logR, gamma_nucl, logRcut)
 	w_R_p = lambda Z, logR: sp.Spectrum_Energy(Z, logR, gamma_p, logRcut)
@@ -443,35 +443,35 @@ def map_arbitrary_units_all_galaxies(galaxy_parameters, tensor_parameters, k_tra
 	# load weights
 	logEth, z_tab, weight_z, cum_weighted_R, cum_weights = sp.Compute_single_integrals(Tensor, E_times_k, A, Z, w_R, w_R_p)
 	z_tab = np.concatenate(([0],z_tab))
-	weight_z = np.concatenate(([weight_z[0]],weight_z))			
-	def fweight_d(d): return interpolate.interp1d(constant._fz_DL(z_tab), weight_z)(d)			
+	weight_z = np.concatenate(([weight_z[0]],weight_z))
+	def fweight_d(d): return interpolate.interp1d(constant._fz_DL(z_tab), weight_z)(d)
 
 	#return the selection and flux weights
 	wflux = fweight_d(dist[sel])* lum[sel]/dist[sel]**2
 	weights_galaxies.append([sel, wflux, cum_weighted_R, cum_weights])
-	
-	# Load anisotropic map	
+
+	# Load anisotropic map
 	Rmean, map_arbitrary_units = load_Map_from_Catalog(galCoord, nside, l, b, weights_galaxies)
 
 	return Rmean, map_arbitrary_units
-	
-	
+
+
 def map_arbitrary_units_with_all_cuts(galaxy_parameters, tensor_parameters, k_transient, galCoord, nside):
 
 	name, dist, l, b, lum = galaxy_parameters
 	Tensor, E_times_k, A, Z, logRcut, gamma_nucl, gamma_p = tensor_parameters
 	weights_galaxies = []
-	
+
 	# select the galaxies behind Virgo
-	dist0, l0, b0, R500, logM500 = constant.load_virgo_properties(galCoord)
-	sel_Virgo = sel_gal_behind(galCoord, dist0, l0, b0, dist, l, b, 3*R500)	
+	dist0, l0, b0, R500, logM500 = utilities.load_virgo_properties(galCoord)
+	sel_Virgo = sel_gal_behind(galCoord, dist0, l0, b0, dist, l, b, 3*R500)
 	sel_NonShadowed = np.invert(sel_Virgo)
-	
+
 	# bin galaxies by maximum rigidity
 	if k_transient is None: logRcut_galaxies = Tensor[0].logRi[-1]*np.ones_like(dist)#maximum possible rigidity
-	else: logRcut_galaxies = constant.logRcut_transient(k_transient, dist, lum)
+	else: logRcut_galaxies = utilities.logRcut_transient(k_transient, dist, lum)
 	list_logRmax, sel_logRmax = Tensor[0].logR2bin(logRcut_galaxies)
-	
+
 	# load spectral model for all galaxies
 	ws_R, ws_R_p = [], []
 	for i, sel_lR in enumerate(sel_logRmax):
@@ -482,33 +482,33 @@ def map_arbitrary_units_with_all_cuts(galaxy_parameters, tensor_parameters, k_tr
 	for i, sel_lR in enumerate(sel_logRmax):
 		# select
 		sel = sel_NonShadowed*sel_lR
-		if np.sum(sel)>0:		
+		if np.sum(sel)>0:
 			# define the function returning the weights
 			logEth, z_tab, weight_z, cum_weighted_R, cum_weights = sp.Compute_single_integrals(Tensor, E_times_k, A, Z, ws_R[i], ws_R_p[i])
 			z_tab = np.concatenate(([0],z_tab))
-			weight_z = np.concatenate(([weight_z[0]],weight_z))			
-			def fweight_d(d): return interpolate.interp1d(constant._fz_DL(z_tab), weight_z)(d)			
+			weight_z = np.concatenate(([weight_z[0]],weight_z))
+			def fweight_d(d): return interpolate.interp1d(constant._fz_DL(z_tab), weight_z)(d)
 
 			#return the selection and flux weights
 			wflux = fweight_d(dist[sel])* lum[sel]/dist[sel]**2
 			weights_galaxies.append([sel, wflux, cum_weighted_R, cum_weights])
-			
+
 	# load weights for galaxies behind Virgo
 	for i, sel_lR in enumerate(sel_logRmax):
 		# select
 		sel = sel_Virgo*sel_lR
 		if np.sum(sel)>0:
 			# define the function returning the weights
-			w_R = lambda Z, logR: ws_R[i](Z, logR)*constant.transparency_cluster(logM500, isProton=False)(logR)
-			w_R_p = lambda Z, logR: ws_R_p[i](Z, logR)*constant.transparency_cluster(logM500, isProton=True)(logR)
+			w_R = lambda Z, logR: ws_R[i](Z, logR)*utilities.transparency_cluster(logM500, isProton=False)(logR)
+			w_R_p = lambda Z, logR: ws_R_p[i](Z, logR)*utilities.transparency_cluster(logM500, isProton=True)(logR)
 			logEth, z_tab, weight_z, cum_weighted_R, cum_weights = sp.Compute_single_integrals(Tensor, E_times_k, A, Z, w_R, w_R_p)
-			def fweight_d(d): return interpolate.interp1d(constant._fz_DL(z_tab), weight_z)(d)			
+			def fweight_d(d): return interpolate.interp1d(constant._fz_DL(z_tab), weight_z)(d)
 
 			#return the selection and flux weights
 			wflux = fweight_d(dist[sel])* lum[sel]/dist[sel]**2
 			weights_galaxies.append([sel, wflux, cum_weighted_R, cum_weights])
-	
-	# Load anisotropic map	
+
+	# Load anisotropic map
 	Rmean, map_arbitrary_units = load_Map_from_Catalog(galCoord, nside, l, b, weights_galaxies)
 
 	return Rmean, map_arbitrary_units

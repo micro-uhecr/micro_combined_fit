@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 
 from combined_fit import spectrum as sp
 from combined_fit import constant
+from combined_fit import utilities
+
 from combined_fit import mass as M
 from combined_fit import xmax_tools as xmax_tls
 
@@ -22,7 +24,7 @@ def latex_float(f):
         return r"{0} \times 10^{{{1}}}".format(base, int(exponent))
     else:
         return float_str
-        
+
 
 def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, hadr_model, Dev = None, lEmin = 17.7, lEmax = 20.3, isInjected  = True, isE3dJdE= True, isSysDisplayed=False, saveTitlePlot=None):
     ''' Plot the expected and the experimental spectrum above the threshold energy
@@ -64,7 +66,7 @@ def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, ha
     plt_Data_Err_up = norm_repr*exp_spectrum['J_up']#
     plt_Data_Err_low = norm_repr*exp_spectrum['J_low']#
     MinBinNumber = np.ndarray.item(np.argwhere(exp_spectrum['logE'] == E_fit))
-    
+
     #Proton spectral points
     exp_proton = sp.load_ProtonSpectrum_Data(hadr_model)#eV, eV-1 km-2 yr-1 sr-1
     norm_repr_p = np.power(10,power_repr*exp_proton['logE'])#
@@ -73,11 +75,11 @@ def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, ha
     plt_Proton_Err_low = norm_repr_p*exp_proton['J_low']#
 
     #Restrict protons to points below the E_fit
-    MaxBinNumber_p =  np.argmax(exp_proton['logE'] > E_fit-0.01)   
+    MaxBinNumber_p =  np.argmax(exp_proton['logE'] > E_fit-0.01)
     plt_Proton_E = exp_proton['logE'][:MaxBinNumber_p]
     plt_Proton_spectrum = plt_Proton_spectrum[:MaxBinNumber_p]
     plt_Proton_Err_up = plt_Proton_Err_up[:MaxBinNumber_p]
-    plt_Proton_Err_low = plt_Proton_Err_low[:MaxBinNumber_p]    
+    plt_Proton_Err_low = plt_Proton_Err_low[:MaxBinNumber_p]
 
     #Plot setup
     fig = plt.subplots(figsize=(6, 4), nrows=1, ncols = 1)
@@ -90,11 +92,11 @@ def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, ha
     plt.ylabel(r'$E^2 J(E)$ [eV$\,$km$^{-2}\,$yr$^{-1}\,$sr$^{-1}\,$]')
     plt.xlim(lEmin,lEmax)
     plt.ylim(3E16,3E20)
-    if isE3dJdE: 
-        plt.ylabel(r'$E^3 J(E)$ [eV$^{2}\,$km$^{-2}\,$yr$^{-1}\,$sr$^{-1}\,$]')    
+    if isE3dJdE:
+        plt.ylabel(r'$E^3 J(E)$ [eV$^{2}\,$km$^{-2}\,$yr$^{-1}\,$sr$^{-1}\,$]')
         plt.ylim(3E36,1E38)
     plt.yscale('log')
-        
+
     #Plot data points
     if not isInjected:
         plt.errorbar(plt_Proton_E, plt_Proton_spectrum, yerr=[plt_Proton_Err_low, plt_Proton_Err_up], fmt='s',  mfc='none', color='tab:red', label = r"$p$ (Sibyll 2.3, Bellido+ '17)")
@@ -109,17 +111,17 @@ def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, ha
         Jp_lower_stat_sys = exp_proton["J"] - np.sqrt(exp_proton["J_low"]**2 + exp_proton["J_sys_low"]**2)
 
         MinPltNumber = np.argmax(exp_spectrum["logE"] > lEmin)
-        
+
         t = mpl.markers.MarkerStyle(marker=r'$\ulcorner\urcorner$')
         t._transform = t.get_transform().rotate_deg(angle_rotate_deg)
-        plt.scatter(exp_spectrum["logE"][MinBinNumber:]+dsys_logE, norm_repr[MinBinNumber:]*J_upper_stat_sys[MinBinNumber:], marker = t, color = 'k')   
-        plt.scatter(exp_proton["logE"][:MaxBinNumber_p]+dsys_logE, norm_repr_p[:MaxBinNumber_p]*Jp_upper_stat_sys[:MaxBinNumber_p], marker = t, color = 'tab:red')           
+        plt.scatter(exp_spectrum["logE"][MinBinNumber:]+dsys_logE, norm_repr[MinBinNumber:]*J_upper_stat_sys[MinBinNumber:], marker = t, color = 'k')
+        plt.scatter(exp_proton["logE"][:MaxBinNumber_p]+dsys_logE, norm_repr_p[:MaxBinNumber_p]*Jp_upper_stat_sys[:MaxBinNumber_p], marker = t, color = 'tab:red')
 
         t = mpl.markers.MarkerStyle(marker=r'$\llcorner\lrcorner$')
-        t._transform = t.get_transform().rotate_deg(angle_rotate_deg)    
-        plt.scatter(exp_spectrum["logE"][MinBinNumber:]-dsys_logE, norm_repr[MinBinNumber:]*J_lower_stat_sys[MinBinNumber:], marker = t, color = 'k')                
+        t._transform = t.get_transform().rotate_deg(angle_rotate_deg)
+        plt.scatter(exp_spectrum["logE"][MinBinNumber:]-dsys_logE, norm_repr[MinBinNumber:]*J_lower_stat_sys[MinBinNumber:], marker = t, color = 'k')
         plt.scatter(exp_proton["logE"][:MaxBinNumber_p]-dsys_logE, norm_repr_p[:MaxBinNumber_p]*Jp_lower_stat_sys[:MaxBinNumber_p], marker = t, color = 'tab:red')
-            
+
     #Plot model
     plot_lines, label_lines = [], []
     MinBinNumberModel =  np.ndarray.item(np.argwhere(logE == E_fit))
@@ -131,7 +133,7 @@ def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, ha
 
     if isInjected:
         color_mass = constant.colors_alt
-    else:    
+    else:
         color_mass = constant.colors
         det_spectra_fin, A_det = [], []
         det_spectra_fin.append(spectrum_per_mass[1])
@@ -141,11 +143,11 @@ def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, ha
         det_spectra_fin.append(np.sum(spectrum_per_mass[5:23], axis =0))
         A_det.append([5,22])
         det_spectra_fin.append(np.sum(spectrum_per_mass[23:39], axis =0))
-        A_det.append([23,38])        
+        A_det.append([23,38])
         det_spectra_fin.append(np.sum(spectrum_per_mass[39:56], axis =0))
-        A_det.append([39,56])                
+        A_det.append([39,56])
         spectrum_per_mass = det_spectra_fin
-        
+
     for i, e in enumerate(spectrum_per_mass):
         l, = plt.plot(logE, norm_repr*spectrum_per_mass[i], color=color_mass[i])
         plot_lines.append(l)
@@ -183,13 +185,13 @@ def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys 
         hadronic interaction model
     delta_shift_sys: `float`
         shift of the model by delta g/cm2
-        
+
     Returns
     -------
     None
     '''
 
-    #Mean and RMS Xmax from models   
+    #Mean and RMS Xmax from models
     mass = [1, 4, 14, 56]
     massXmax = np.zeros((len(mass),len(logE)))
     massRMS  = np.zeros((len(mass),len(logE)))
@@ -197,18 +199,18 @@ def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys 
         lnA = np.log(mass[i])
         massXmax[i] = xmax_tls.getXmax(logE, lnA, model)
         massRMS[i] = np.sqrt( xmax_tls.getVar_sh(logE, lnA, model) )
-    
+
     #Data
     experimental_xmax["sysRMS_low"] = experimental_xmax["sysRMS_low"]* -1
     experimental_xmax["sysXmax_low"] = experimental_xmax["sysXmax_low"]* -1
     MinBinData =  np.ndarray.item(np.argwhere(experimental_xmax["meanLgE"] == E_fit))
-            
+
     #Plot setup
     fig, axs = plt.subplots(figsize=(6, 4), nrows=2, ncols = 1, sharex=True)
-    plt.subplots_adjust(bottom = 0.15, top = 0.92, left=0.15, right=0.96, hspace=0.0)   
+    plt.subplots_adjust(bottom = 0.15, top = 0.92, left=0.15, right=0.96, hspace=0.0)
     if Dev!=None:
         N_X = len(experimental_xmax["fXmax"][MinBinData:]) + len(experimental_xmax["fRMS"][MinBinData:])
-        axs[0].set_title(r"$D_{\rm X} = $"+ str( np.around(Dev, decimals = 1)) + r" ($N_{\rm X} = $" + str(N_X)+")", ha="center", va = 'center', fontsize=12) 
+        axs[0].set_title(r"$D_{\rm X} = $"+ str( np.around(Dev, decimals = 1)) + r" ($N_{\rm X} = $" + str(N_X)+")", ha="center", va = 'center', fontsize=12)
 
     ###### Mean Xmax plot ##########################################################
     axs[0].tick_params(labelbottom=False, bottom=False, top=True, right=True)
@@ -223,16 +225,16 @@ def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys 
                         arrowprops=dict(arrowstyle="->"), ha='center', verticalalignment='bottom')
 
     #Plot data points w/ stat. uncertainty
-    axs[0].errorbar(experimental_xmax["meanLgE"], experimental_xmax["fXmax"], fmt='o',yerr = experimental_xmax["statXmax"], mfc='none', color = 'tab:gray')   
-    axs[0].errorbar(experimental_xmax["meanLgE"][MinBinData:], experimental_xmax["fXmax"][MinBinData:],yerr = experimental_xmax["statXmax"][MinBinData:], fmt='o', mfc='none', color = 'k', label = "Yushkov+ '19")    
-    
+    axs[0].errorbar(experimental_xmax["meanLgE"], experimental_xmax["fXmax"], fmt='o',yerr = experimental_xmax["statXmax"], mfc='none', color = 'tab:gray')
+    axs[0].errorbar(experimental_xmax["meanLgE"][MinBinData:], experimental_xmax["fXmax"][MinBinData:],yerr = experimental_xmax["statXmax"][MinBinData:], fmt='o', mfc='none', color = 'k', label = "Yushkov+ '19")
+
     #Plot bounds w/ stat + sys
     Xmax_upper_stat_sys = experimental_xmax["fXmax"] + np.sqrt(experimental_xmax["statXmax"]**2 + experimental_xmax["sysXmax_up"]**2)
     Xmax_lower_stat_sys = experimental_xmax["fXmax"] - np.sqrt(experimental_xmax["statXmax"]**2 + experimental_xmax["sysXmax_low"]**2)
     axs[0].scatter(experimental_xmax["meanLgE"], Xmax_upper_stat_sys, marker = r'$\ulcorner\urcorner$', color = 'tab:gray')
-    axs[0].scatter(experimental_xmax["meanLgE"], Xmax_lower_stat_sys, marker = r'$\llcorner\lrcorner$', color = 'tab:gray')            
+    axs[0].scatter(experimental_xmax["meanLgE"], Xmax_lower_stat_sys, marker = r'$\llcorner\lrcorner$', color = 'tab:gray')
     axs[0].scatter(experimental_xmax["meanLgE"][MinBinData:], Xmax_upper_stat_sys[MinBinData:], marker = r'$\ulcorner\urcorner$', color = 'k')
-    axs[0].scatter(experimental_xmax["meanLgE"][MinBinData:], Xmax_lower_stat_sys[MinBinData:], marker = r'$\llcorner\lrcorner$', color = 'k')                
+    axs[0].scatter(experimental_xmax["meanLgE"][MinBinData:], Xmax_lower_stat_sys[MinBinData:], marker = r'$\llcorner\lrcorner$', color = 'k')
 
     #Plot model
     MinBinNumber = np.ndarray.item(np.argwhere(logE == E_fit))
@@ -242,32 +244,32 @@ def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys 
         axs[0].plot(logE, massXmax[j],color = xmax_tls.colors_Xmax[j], linestyle=':' )
 
     axs[0].legend(loc = "lower right")
-    
+
     ###### Sigma Xmax plot #########################################################
     axs[1].tick_params(bottom=True, top=True, right=False)
     axs[1].set_xlabel(r'Energy, log$_{10}\, E$ [eV]')
     axs[1].set_ylabel(r'$ \sigma (X_{\mathrm{max}})$')
     axs[1].set_ylim(15,75)
 
-    #Plot data points    
+    #Plot data points
     axs[1].errorbar(experimental_xmax["meanLgE"], experimental_xmax["fRMS"],yerr =experimental_xmax["statRMS"], fmt='o', mfc='none', color = 'tab:gray')
-    axs[1].errorbar(experimental_xmax["meanLgE"][MinBinData:], experimental_xmax["fRMS"][MinBinData:],yerr =experimental_xmax["statRMS"][MinBinData:], fmt='o', mfc='none', color = 'k')    
+    axs[1].errorbar(experimental_xmax["meanLgE"][MinBinData:], experimental_xmax["fRMS"][MinBinData:],yerr =experimental_xmax["statRMS"][MinBinData:], fmt='o', mfc='none', color = 'k')
 
     #Plot bounds w/ stat + sys
     RMS_upper_stat_sys = experimental_xmax["fRMS"] + np.sqrt(experimental_xmax["statRMS"]**2 + experimental_xmax["sysRMS_up"]**2)
     RMS_lower_stat_sys = experimental_xmax["fRMS"] - np.sqrt(experimental_xmax["statRMS"]**2 + experimental_xmax["sysRMS_low"]**2)
     axs[1].scatter(experimental_xmax["meanLgE"], RMS_upper_stat_sys, marker = r'$\ulcorner\urcorner$', color = 'tab:gray')
-    axs[1].scatter(experimental_xmax["meanLgE"], RMS_lower_stat_sys, marker = r'$\llcorner\lrcorner$', color = 'tab:gray')            
+    axs[1].scatter(experimental_xmax["meanLgE"], RMS_lower_stat_sys, marker = r'$\llcorner\lrcorner$', color = 'tab:gray')
     axs[1].scatter(experimental_xmax["meanLgE"][MinBinData:], RMS_upper_stat_sys[MinBinData:], marker = r'$\ulcorner\urcorner$', color = 'k')
-    axs[1].scatter(experimental_xmax["meanLgE"][MinBinData:], RMS_lower_stat_sys[MinBinData:], marker = r'$\llcorner\lrcorner$', color = 'k')                
-        
+    axs[1].scatter(experimental_xmax["meanLgE"][MinBinData:], RMS_lower_stat_sys[MinBinData:], marker = r'$\llcorner\lrcorner$', color = 'k')
+
     #Plot model
     for j,e in enumerate(mass):
         l, = axs[1].plot(logE, massRMS[j],color = xmax_tls.colors_Xmax[j], linestyle=':')
         if j==1: lref=l
     axs[1].plot(logE, RMS, color='tab:brown', linestyle='--')
     axs[1].plot(logE[MinBinNumber:], RMS[MinBinNumber:], color='tab:brown')
-    
+
     axs[1].legend([lref], ["Sibyll 2.3"], loc="upper right")
 
     axs[1].text(lEmax, 56, 'p', fontsize=12, color = 'tab:red')
@@ -276,5 +278,5 @@ def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys 
     axs[1].text(lEmax, 19, 'Fe', fontsize=12, color = 'tab:blue')
 
     fig.align_ylabels(axs[:])
-    
+
     if saveTitlePlot is not None: MySaveFig(fig, saveTitlePlot)

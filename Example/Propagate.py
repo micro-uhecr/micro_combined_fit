@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from astropy.table import Table
 
 from combined_fit import spectrum as sp
-from combined_fit import constant
+from combined_fit import constant,utilities
 from combined_fit import mass
 from combined_fit import tensor as ts
 from combined_fit import draw
@@ -21,12 +21,12 @@ if __name__ == "__main__":
     #Injected masses
     A	= [	1,	 4,	14,	28,	56]
     Z	= [	1,	 2,  7,	14, 26]
-    
+
     hadr_model = "Sibyll" #"Sibyll" or "EPOS-LHC"
-    logRmin = 17.8 #Integrate the injected spectrum from logR_min to get total energy x k    
+    logRmin = 17.8 #Integrate the injected spectrum from logR_min to get total energy x k
     logE_th = 18.75 # Compute the deviance from logE_th
     isSFR = True # True for SFRD, False for SMD
-    
+
     #Best-fit parameters, inferred with Examples/Fit.py
     if isSFR:
         key = "sfrd"#solar mass / (yr.Mpc3)
@@ -52,7 +52,7 @@ if __name__ == "__main__":
     ###########################################################################
 
     plt.rcParams.update({'font.size': 14,'legend.fontsize': 12})
-    
+
     sp.Plot_spectrum(	Tensor, E_times_k, ts.A, ts.Z, w_zR_nucl, w_zR_p, logE_th, hadr_model, isE3dJdE= False, isRenormalized=False, ext_save=key)
     mass.Plot_Xmax(		Tensor, E_times_k, sigma_shift_sys, ts.A, ts.Z, w_zR_nucl, w_zR_p, logE_th, hadr_model, ext_save=key)
 

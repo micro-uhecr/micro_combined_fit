@@ -30,10 +30,10 @@ def getXRMS (lgE, meanVar_sh, VarLnA, model):
     D = par[1]
     csi = par[2]
     delta = par[3]
-    
+
     fE = csi - D/np.log(10) + delta * (lgE - 19.)
     Var = meanVar_sh + fE * fE * VarLnA
-    
+
     return np.sqrt(Var)
 
 
@@ -50,7 +50,7 @@ def getXmax (lgE, lnA, model, sigma_shift_sys=0):
         hadronic interaction model
     sigma_shift_sys: `float`
         shift of the model by nsigma_sys
-        
+
     Returns
     -------
     vXmax: 'float'
@@ -180,5 +180,5 @@ def  getVar_sh (lgE, lnA, model):
     b = par[5]
 
     variance = Vp * (1 + a * lnA + b * lnA * lnA)
-    
+
     return variance

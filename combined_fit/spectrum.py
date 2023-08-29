@@ -6,6 +6,7 @@ from scipy import interpolate, integrate
 from astropy.table import Table
 
 from combined_fit import constant
+from combined_fit import utilities
 from combined_fit import draw
 from combined_fit import mass
 from combined_fit import xmax_tools as xmax_tls

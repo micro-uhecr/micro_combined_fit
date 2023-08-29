@@ -23,13 +23,13 @@ mass interface
     :members:
     :undoc-members:
 
-gumbel interface
+map interface
 ================
 
-`combined_fit.gumbel`
+`combined_fit.map`
 ---------------------
 
-.. automodule:: combined_fit.gumbel
+.. automodule:: combined_fit.map
     :members:
     :undoc-members:
 
@@ -43,15 +43,6 @@ tensor interface
     :members:
     :undoc-members:
 
-xmax_distr interface
-====================
-
-`combined_fit.xmax_distr`
--------------------------
-
-.. automodule:: combined_fit.xmax_distr
-    :members:
-    :undoc-members:
 
 xmax_tools interface
 ====================
@@ -92,4 +83,3 @@ draw interface
 .. automodule:: combined_fit.draw
     :members:
     :undoc-members:
-

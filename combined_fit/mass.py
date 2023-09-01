@@ -12,7 +12,7 @@ COMBINED_FIT_BASE_DIR = pathlib.Path(__file__).parent.resolve()
 
 
 def Plot_Xmax(t, frac, sigma_shift_sys, A, Z, w_zR, w_zR_p, E_fit, model, ext_save=""):
-    '''Compute the expected xmax mean and sigma, upload the experimental results, compute the deviance and plot both of them
+    """Compute the expected xmax mean and sigma, upload the experimental results, compute the deviance and plot both of them
 
     Parameters
     -----------
@@ -35,7 +35,7 @@ def Plot_Xmax(t, frac, sigma_shift_sys, A, Z, w_zR, w_zR_p, E_fit, model, ext_sa
     Returns
     -------
     None
-        '''
+    """
     logE, Xmax, RMS = expected_Xmax_sigmaXmax(t, frac, A, Z, w_zR, w_zR_p, model, sigma_shift_sys)
     Experimental_Xmax = load_Xmax_data()
     dev = compute_Xmax_Deviance(logE, Xmax, RMS, Experimental_Xmax, E_fit, sigma_shift_sys) # computation of deviance
@@ -43,7 +43,7 @@ def Plot_Xmax(t, frac, sigma_shift_sys, A, Z, w_zR, w_zR_p, E_fit, model, ext_sa
 
 
 def expected_Xmax_sigmaXmax(t, frac, A, Z, w_zR, w_zR_p, model, sigma_shift_sys=0):
-    '''Compute the expected xmax mean and sigma
+    """Compute the expected xmax mean and sigma
 
     Parameters
     ----------
@@ -68,7 +68,7 @@ def expected_Xmax_sigmaXmax(t, frac, A, Z, w_zR, w_zR_p, model, sigma_shift_sys=
         mean Xmax(for different lgE)
     RMS: `list`
         RMS of Xmax (for different lgE)
-'''
+    """
     logE = t[0].logE
     A, frac_tot = get_fractions_p(t, frac, A, Z, w_zR, w_zR_p)
     lnA = np.log(A)
@@ -97,7 +97,7 @@ def expected_Xmax_sigmaXmax(t, frac, A, Z, w_zR, w_zR_p, model, sigma_shift_sys=
 
 
 def compute_Xmax_Deviance(logE, Xmax, RMS, experimental_xmax, E_fit, sigma_shift_sys=0, verbose=False):
-    '''Compute the deviance for Xmax
+    """Compute the deviance for Xmax
 
     Parameters
     ----------
@@ -116,7 +116,7 @@ def compute_Xmax_Deviance(logE, Xmax, RMS, experimental_xmax, E_fit, sigma_shift
     Returns
     -------
     None
-    '''
+    """
     XmaxMean_E = interpolate.interp1d(logE, Xmax)
     RMS_E = interpolate.interp1d(logE, RMS)
 
@@ -132,7 +132,7 @@ def compute_Xmax_Deviance(logE, Xmax, RMS, experimental_xmax, E_fit, sigma_shift
 
 
 def get_fractions_p(t, frac, A, Z, w_zR, w_zR_p):
-    '''Provide the mass fraction at the top of the atmosphere for a given choice of the parameters at the source
+    """Provide the mass fraction at the top of the atmosphere for a given choice of the parameters at the source
 
     Parameters
     ----------
@@ -144,22 +144,19 @@ def get_fractions_p(t, frac, A, Z, w_zR, w_zR_p):
         Mass and charge of the injected particles
     w_zR : `list`
         log Rigidity of the injected particles
-    xmax: `Table`
-        experimental xmax moments
-
     Returns
     -------
     A: `list`
         Mass at the top of the atmosphere
     frac_def: `list`
         Mass fractions at the top of the atmosphere
-                #if (i == 0):
-                    #je = t[i].J_E(t[i].tensor_stacked, w_zR_p, Z[i])
-                #else:
-    '''
+            #if (i == 0):
+                #je = t[i].J_E(t[i].tensor_stacked, w_zR_p, Z[i])
+            #else:
+    """
     sel_A, fractions = [], []
     for i,a in enumerate(A):
-        if (i == 0):
+        if i==0:
             je = t[i].J_E(t[i].tensor_stacked_A, w_zR_p, Z[i])
         else:
             je = t[i].J_E(t[i].tensor_stacked_A, w_zR, Z[i])
@@ -173,7 +170,7 @@ def get_fractions_p(t, frac, A, Z, w_zR, w_zR_p):
 
 
 def reduced_fractions(A_old, frac_old,size):
-    '''Reduce the mass fraction to a 56 size for all the energies
+    """Reduce the mass fraction to a 56 size for all the energies
 
     Parameters
     ----------
@@ -189,7 +186,7 @@ def reduced_fractions(A_old, frac_old,size):
         Mass at the top of the atmosphere (56)
     frac: `list`
         Mass fractions at the top of the atmosphere  (56)
-    '''
+    """
     
     #TBD: could likely be fastened
     A = np.zeros(56)
@@ -202,7 +199,7 @@ def reduced_fractions(A_old, frac_old,size):
 
 
 def load_Xmax_data():
-    '''Upload the experimental data (Xmax) for a given Hadronic Interaction model
+    """Upload the experimental data (Xmax) for a given hadronic Interaction model
 
     Parameters
     -------
@@ -211,6 +208,6 @@ def load_Xmax_data():
     -------
     Table: `read`
         experimental data
-    '''
+    """
     filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Public_data/Composition/Xmax_moments_icrc17_v2.txt')
     return Table.read(filename, format='ascii.ecsv', delimiter=" ", guess=False)

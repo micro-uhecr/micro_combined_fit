@@ -16,9 +16,10 @@ Including some plots?
 Notebooks
 =========
 In the notebook folder we provide three examples:
--Propagate
--Fit
--Maps
+
+- Propagate
+- Fit
+- Maps
 
 Scripts
 =======

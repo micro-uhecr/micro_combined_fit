@@ -9,7 +9,7 @@ At some point you will be able to install `combined_fit` with `pip` or from sour
 Installing with pip
 -------------------
 
-This is will work one day, believe me.
+Not implemented yet.
 
 .. code-block:: bash
 
@@ -20,7 +20,9 @@ This is will work one day, believe me.
 Installing from source
 -----------------------
 
-Since `combined_fit` is all python code, this is pretty easy.
+`combined_fit` shall be installed within a conda environment.
+Instructions below use `conda`, but we actually recommend the user to install
+and use `mamba` (https://mamba.readthedocs.io/en/latest/installation.html) for a faster installation.
 
 .. code-block:: bash
 

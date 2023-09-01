@@ -1,56 +1,61 @@
 import sys
 import numpy as np
 
-
 colors_Xmax = ['tab:red', 'tab:grey', 'tab:green', 'tab:blue']
-HIM_list = ["EPOS-LHC", "QGSJET-II04", "Sibyll2.3d"]
+HIM_list = ["EPOS-LHC", "QGSJET-II04", "Sibyll"]
+
+_sysXmax = 8#g/cm2
 
 
 def getXRMS (lgE, meanVar_sh, VarLnA, model):
-    ''' This function provides the Xmax RMS
+    """ This function provides the Xmax RMS
 
     Parameters
     ----------
-    lgE : `float`
+    lgE: `float`
         log of energy
-    meanVar_sh : `float`
+    meanVar_sh: `float`
         mean variance of lnA
-    VarLnA : `float`
+    VarLnA: `float`
         variance of lnA
-    model : `string`
+    model: `string`
         hadronic interaction model
 
     Returns
     -------
     np.sqrt(Var): 'float'
         Xmax RMS
-    '''
+    """
     par  = getParX (model)
     D = par[1]
     csi = par[2]
     delta = par[3]
+
     fE = csi - D/np.log(10) + delta * (lgE - 19.)
     Var = meanVar_sh + fE * fE * VarLnA
+
     return np.sqrt(Var)
 
 
-def getXmax (lgE, lnA, model):
-    ''' This function provides the mean Xmax
+def getXmax (lgE, lnA, model, sigma_shift_sys=0):
+    """ This function provides the mean Xmax
 
     Parameters
     ----------
-    lgE : `float`
+    lgE: `float`
         log of energy
-    lnA : `float`
+    lnA: `float`
         lnA
-    model : `string`
+    model: `string`
         hadronic interaction model
+    sigma_shift_sys: `float`
+        shift of the model by nsigma_sys
 
     Returns
     -------
     vXmax: 'float'
         Xmax mean
-    '''
+    """
     paramXmax = getParX (model)
     X0 = paramXmax[0]
     D = paramXmax[1]
@@ -62,23 +67,23 @@ def getXmax (lgE, lnA, model):
 
     vXmax = Xmaxp + fE * lnA
 
-    return vXmax
+    return vXmax + sigma_shift_sys*_sysXmax
 
 
 def getParX (model):
-    ''' Take the parameters for the chosen HIM (see GAP2018-021)
+    """ Take the parameters for the chosen HIM (see GAP2018-021)
         necessary for mean Xmax
 
     Parameters
     ----------
-    model : `string`
+    model: `string`
         hadronic interaction model
 
     Returns
     -------
     np.sqrt(Var): 'list'
         Parameters for the chosen HIM
-    '''
+    """
     # - EPOS-LHC -----------------------------------
     #    X01:            806.0366 +/- 0.2642
     #    D1:             56.2948 +/- 0.2491
@@ -118,19 +123,19 @@ def getParX (model):
 
 
 def getParS(model):
-    ''' Take the parameters for the chosen HIM (see GAP2018-021)
+    """ Take the parameters for the chosen HIM (see GAP2018-021)
         necessary for sigma Xmax
 
     Parameters
     ----------
-    model : `string`
+    model: `string`
         hadronic interaction model
 
     Returns
     -------
-    np.sqrt(Var): 'list'
+    p: 'list'
         Parameters for the chosen HIM
-    '''
+    """
     pS = [3.72671955e+03, -4.83807008e+02, 1.32476965e+02, -4.05484134e-01, -2.53645381e-04, 4.74942981e-02] # parameter sibyll2.3d
     pE = [3.28443199e+03, -2.59993619e+02, 1.32120013e+02, -4.62258867e-01, -8.27458740e-04, 5.88101979e-02] # parameter eposlhc
     pQ = [3.73791570e+03, -3.74535249e+02, -2.12774852e+01, -3.96929960e-01, 8.17397773e-04, 4.57900290e-02] # parameter qgsjetII04
@@ -148,22 +153,22 @@ def getParS(model):
 
 
 def  getVar_sh (lgE, lnA, model):
-    ''' Get the variance for a certain HIM
+    """ Get the variance for a certain HIM
 
     Parameters
     ----------
-    lgE : `float`
+    lgE: `float`
         log of energy
-    lnA : `float`
+    lnA: `float`
         lnA
-    model : `string`
+    model: `string`
         hadronic interaction model
 
     Returns
     -------
     variance: 'float'
         Xmax variance
-        '''
+        """
     if model not in HIM_list:
         print("Hadronic interaction model not valid! ", model)
         sys.exit(0)
@@ -175,27 +180,5 @@ def  getVar_sh (lgE, lnA, model):
     b = par[5]
 
     variance = Vp * (1 + a * lnA + b * lnA * lnA)
+
     return variance
-
-
-def gaussian(x, mu, sig):
-    ''' Simple gaussian function
-
-    Parameters
-    ----------
-    x : `float`
-        value
-    mu : `float`
-        mean
-    sig : `float`
-        sigma
-
-    Returns
-    -------
-    value: 'float'
-        value of the gaussian function at x
-    '''
-    if sig == 0:
-        return 1.e30
-    arg = (x-mu)/sig
-    return np.exp(-0.5*arg*arg)/(2.50662827463100024*sig)

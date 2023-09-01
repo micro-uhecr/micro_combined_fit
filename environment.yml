@@ -1,16 +1,19 @@
 name: micro_combined_fit
 channels:
   - defaults
-  - conda-forge  
+  - conda-forge
 dependencies:
-  - astropy
+  - astropy>=5.3.1
   - matplotlib
   - numpy
   - pandas
   - python>=3.9
-  - scipy
+  - scipy>=1.5
   - iminuit
   - jupyterlab
   - setuptools
   - numba
   - zstandard
+  - tqdm
+  - healpy
+  - nomkl

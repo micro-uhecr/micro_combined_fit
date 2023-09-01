@@ -1,10 +1,12 @@
-astropy
+astropy>=5.3.1
 matplotlib
 numpy
 pandas
-scipy
+scipy>=1.5
 iminuit
 jupyterlab
 setuptools
 numba
 zstandard
+tqdm
+healpy

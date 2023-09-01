@@ -1,0 +1,42 @@
+================================================================
+Doing a combined fit of UHECRs spectra
+================================================================
+
+Software dedicated to provide a self-consistent modeling framework for fitting simultaneously  energy spectrum, mass composition and arrival direction information 
+
+The main repository is at:
+https://gitlab.in2p3.fr/micro/micro_combined_fit
+
+The documentation (to be updated soon) is at:
+https://micro.pages.in2p3.fr/micro_combined_fit/
+
+A mirror is proposed on github at:
+https://github.com/micro-uhecr/micro_combined_fit
+
+For more information on the MICRO UHECR project read:
+https://micro-uhecr.github.io/
+
+combined_fit package
+------------------------------------
+
+The main components are:
+
+1. mass
+
+2. gumbel
+
+3. spectrum
+
+4. Xmass_distr
+
+
+Documentation Contents
+----------------------
+
+.. toctree::
+   :includehidden:
+   :maxdepth: 3
+
+   install
+   combined_fit
+   

@@ -27,31 +27,31 @@ def latex_float(f):
 
 
 def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, hadr_model, Dev = None, lEmin = 17.7, lEmax = 20.3, isInjected  = True, isE3dJdE= True, isSysDisplayed=False, saveTitlePlot=None):
-    ''' Plot the expected and the experimental spectrum above the threshold energy
+    """ Plot the expected and the experimental spectrum above the threshold energy
 
     Parameters
     ----------
-    A : `list`
+    A: `list`
         mass of injected particles
-    logE : `list`
+    logE: `list`
         list of  energy bins as stored in the tensor
     expected_spectrum: `list`
         total expected spectrum at the top of the atmosphere
     spectrum_per_mass: `list`
         total expected spectrum at the top of the atmosphere
-    norm : `float`
+    norm: `float`
         normalization of the expected spectrum
-    E_fit : `float`
+    E_fit: `float`
         Energy bin from which the deviance is computed
-    hadr_model : `string`
+    hadr_model: `string`
         hadronic interaction model
-    Dev : `float`
+    Dev: `float`
         Deviance if None, not printed
 
     Returns
     -------
     None
-        '''
+        """
     #Power to which energy is raised in plot e.g. 2 -> E2dJ/dE
     power_repr = 2
     if isE3dJdE: power_repr = 3
@@ -167,19 +167,19 @@ def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, ha
 
 
 def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys = 0, Dev=None, lEmin = 17.7, lEmax = 20.3, saveTitlePlot=None):
-    '''Draw the experimental and the expected Xmax mean and sigma
+    """Draw the experimental and the expected Xmax mean and sigma
 
     Parameters
     ----------
-    logE : `list`
+    logE: `list`
         energy bins from the read tensor
-    Xmax : `list`
+    Xmax: `list`
         mean Xmax (for different lgE)
     RMS: `list`
         Variance of Xmax (for different lgE)
-    experimental_xmax : `Table`
+    experimental_xmax: `Table`
         Xmax as read in data folder
-    E_fit : `float`
+    E_fit: `float`
         energy from which the deviance is computed
     model: `string`
         hadronic interaction model
@@ -189,7 +189,7 @@ def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys 
     Returns
     -------
     None
-    '''
+    """
 
     #Mean and RMS Xmax from models
     mass = [1, 4, 14, 56]

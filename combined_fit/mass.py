@@ -16,15 +16,15 @@ def Plot_Xmax(t, frac, sigma_shift_sys, A, Z, w_zR, w_zR_p, E_fit, model, ext_sa
 
     Parameters
     -----------
-    t : `tensor`
+    t: `tensor`
         upload tensor for the extra-galactic propagation
-    frac : `list`
+    frac: `list`
         fractions at the top of the atmosphere
     sigma_shift_sys: `float`
         shift of the model by nsigma_sys        
     A,Z: `list`
         Mass and charge of the injected particles
-    w_zR : `list`
+    w_zR: `list`
         log Rigidity of the injected particles
     E_fit: `float`
         energy from which the deviance is computed
@@ -47,13 +47,13 @@ def expected_Xmax_sigmaXmax(t, frac, A, Z, w_zR, w_zR_p, model, sigma_shift_sys=
 
     Parameters
     ----------
-    t : `tensor`
+    t: `tensor`
         upload tensor for the extra-galactic propagation
-    frac : `list`
+    frac: `list`
         fractions at the top of the atmosphere
     A,Z: `list`
         Mass and charge of the injected particles
-    w_zR : `list`
+    w_zR: `list`
         log Rigidity of the injected particles
     model: `string`
         Hadronic Interaction model
@@ -101,15 +101,15 @@ def compute_Xmax_Deviance(logE, Xmax, RMS, experimental_xmax, E_fit, sigma_shift
 
     Parameters
     ----------
-    logE : `list`
+    logE: `list`
         energy bins from the read tensor
-    Xmax : `list`
+    Xmax: `list`
         mean Xmax (for different lgE)
     RMS: `list`
         Variance of Xmax (for different lgE)
-    experimental_xmax : `Table`
+    experimental_xmax: `Table`
         Xmax as read in data folder
-    E_fit : `float`
+    E_fit: `float`
         energy from which the deviance is computed
     sigma_shift_sys: `float`
         shift of the Xmax model by nsigma_sys        
@@ -136,13 +136,13 @@ def get_fractions_p(t, frac, A, Z, w_zR, w_zR_p):
 
     Parameters
     ----------
-    t : `tensor`
+    t: `tensor`
         upload tensor for the extra-galactic propagation
-    frac : `list`
+    frac: `list`
         fractions at the top of the atmosphere
     A,Z: `list`
         Mass and charge of the injected particles
-    w_zR : `list`
+    w_zR: `list`
         log Rigidity of the injected particles
     Returns
     -------
@@ -174,9 +174,9 @@ def reduced_fractions(A_old, frac_old,size):
 
     Parameters
     ----------
-    A_old : `list`
+    A_old: `list`
         concatenated mass at the top of the atmosphere
-    frac_old : `list`
+    frac_old: `list`
         concatenated mass fractions at the top of the atmosphere
     size: `int`
         number of concatenated fractions

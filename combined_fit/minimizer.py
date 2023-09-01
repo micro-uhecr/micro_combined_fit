@@ -8,22 +8,22 @@ from combined_fit import mass
 
 @jit
 def Xmax_Minimization(parms, args, w_zR, w_zR_p):
-    ''' Compute the Xmax minimization
+    """ Compute the Xmax minimization
 
     Parameters
     ----------
-    parms : `list`
+    parms: `list`
         List of parameters to be fitted
-    args : `list`
+    args: `list`
         List of arguments needed to the function
-    w_zR : `float`
+    w_zR: `float`
         Weights in
 
     Returns
     -------
     Deviance: 'float'
         return the deviance due to the minimization of Xmax
-    '''
+    """
     
     t = args[0]
     A = args[1]
@@ -40,22 +40,22 @@ def Xmax_Minimization(parms, args, w_zR, w_zR_p):
 
 @jit
 def Spectrum_Minimization_p(parms, args, w_zR, w_zR_p, isRealUnits = True):
-    ''' Performing the minimization of the energy spectrum
+    """ Performing the minimization of the energy spectrum
 
     Parameters
     ----------
-    parms : `list`
+    parms: `list`
         List of parameters to be fitted
-    args : `list`
+    args: `list`
         List of arguments needed to the function
-    w_zR : `float`
+    w_zR: `float`
         Weights in
 
     Returns
     -------
     Deviance: 'float'
         return the deviance due to the minimization of Spectrum
-    '''
+    """
    
     t = args[0]
     A = args[1]
@@ -72,22 +72,22 @@ def Spectrum_Minimization_p(parms, args, w_zR, w_zR_p, isRealUnits = True):
    
     
 def Minimize_Spectrum_And_Xmax(parms, args, verbose = True):
-    ''' Computing the deviance of the energy spectrum and Xmax
+    """ Computing the deviance of the energy spectrum and Xmax
 
     Parameters
     ----------
-    parms : `list`
+    parms: `list`
         List of parameters to be fitted
-    args : `list`
+    args: `list`
         List of arguments needed to the function
-    verbose : `bool`
+    verbose: `bool`
         Increse the verbosity of the function
 
     Returns
     -------
     Deviance: 'float'
         return the sum of the deviance of spectrum and Xmax
-    '''
+    """
     logRcut = parms[-3]
     gamma = parms[-2]
     gamma_p = parms[-1]
@@ -100,28 +100,28 @@ def Minimize_Spectrum_And_Xmax(parms, args, verbose = True):
     Dev_Spectrum = Spectrum_Minimization_p(parms, args, w_zR, w_zR_p)
 
     if verbose:
-        print("Spectrum deviance: ", np.around(Dev_Spectrum, decimals=2), " | Composition deviance: ", np.around(Dev_Compo, decimals=2), "  | gamma: ", np.around(gamma, decimals=2), "  | logRcut : ", np.around(logRcut, decimals=2), "| gamma p ", np.around(gamma_p, decimals=2), " ", parms[0], " ", parms[1]," ", parms[2]," ", parms[3]," ", parms[4])
+        print("Spectrum deviance: ", np.around(Dev_Spectrum, decimals=2), " | Composition deviance: ", np.around(Dev_Compo, decimals=2), "  | gamma: ", np.around(gamma, decimals=2), "  | logRcut: ", np.around(logRcut, decimals=2), "| gamma p ", np.around(gamma_p, decimals=2), " ", parms[0], " ", parms[1]," ", parms[2]," ", parms[3]," ", parms[4])
         
     return Dev_Compo + Dev_Spectrum
     
     
 def Minimize_Spectrum(parms, args, verbose = True):
-    ''' Computing the deviance of the energy spectrum
+    """ Computing the deviance of the energy spectrum
 
     Parameters
     ----------
-    parms : `list`
+    parms: `list`
         List of parameters to be fitted
-    args : `list`
+    args: `list`
         List of arguments needed to the function
-    verbose : `bool`
+    verbose: `bool`
         Increse the verbosity of the function
 
     Returns
     -------
     Deviance: 'float'
         return the sum of the deviance of spectrum and Xmax
-    '''
+    """
     logRcut = parms[-3]
     gamma = parms[-2]
     gamma_p = parms[-1]
@@ -133,30 +133,30 @@ def Minimize_Spectrum(parms, args, verbose = True):
     Dev_Spectrum = Spectrum_Minimization_p(parms, args, w_zR, w_zR_p)
 
     if verbose:
-        print("Spectrum deviance: ", np.around(Dev_Spectrum, decimals=2), "  | gamma: ", np.around(gamma, decimals=2), "  | logRcut : ", np.around(logRcut, decimals=2), "| gamma p ", np.around(gamma_p, decimals=2), " ", parms[0], " ", parms[1]," ", parms[2]," ", parms[3]," ", parms[4])
+        print("Spectrum deviance: ", np.around(Dev_Spectrum, decimals=2), "  | gamma: ", np.around(gamma, decimals=2), "  | logRcut: ", np.around(logRcut, decimals=2), "| gamma p ", np.around(gamma_p, decimals=2), " ", parms[0], " ", parms[1]," ", parms[2]," ", parms[3]," ", parms[4])
         
     return Dev_Spectrum    
     
     
 def Results(res, nA, masses, unit_E_times_k, logRmin, verbose = True):
-    ''' Computing the deviance of the energy spectrum and Xmax
+    """ Computing the deviance of the energy spectrum and Xmax
 
     Parameters
     ----------
-    res : `object`
+    res: `object`
         output of iminuit minimize
-    nA : `int`
+    nA: `int`
         number of nuclear component
-    masses : `list of str`
+    masses: `list of str`
         string with names of nuclei
-    unit_E_times_k : `str`
+    unit_E_times_k: `str`
         unit of E_times_k
-    verbose : `bool`
+    verbose: `bool`
         Increse the verbosity of the function
 
     Returns
     -------
-    E_times_k : `list`
+    E_times_k: `list`
         List of energy flux of nuclear components
     sigma_shift_sys: `float`
         shift of the Xmax model by nsigma_sys        
@@ -166,7 +166,7 @@ def Results(res, nA, masses, unit_E_times_k, logRmin, verbose = True):
         index of nuclei
     gamma_p: 'float'
         index of protons
-    '''
+    """
            
     #Extract best-fit parameters
     E_times_k = res.x[:nA]
@@ -211,6 +211,6 @@ def Results(res, nA, masses, unit_E_times_k, logRmin, verbose = True):
         print("gamma nucl:  ", np.around(gamma_nucl, decimals = 2), " +/- ", np.around(err_gamma_nucl, decimals = 2))      
         print("k x Etot  above log(R/V) =",logRmin,": (", np.around(Etot_times_k/powEtot, decimals = 2), "+/-", np.around(err_Etot_times_k/powEtot, decimals = 2), ") x ",np.format_float_scientific(powEtot, precision=0), unit_E_times_k)
         for i in range (nA):
-            print(masses[i]," (%) :  (",np.around(100*E_times_k[i]/Etot_times_k, decimals = 1),"+/-" , np.around(100*err[i]/Etot_times_k, decimals = 1), ") x ", np.format_float_scientific(Etot_times_k, precision=2), unit_E_times_k)
+            print(masses[i]," (%):  (",np.around(100*E_times_k[i]/Etot_times_k, decimals = 1),"+/-" , np.around(100*err[i]/Etot_times_k, decimals = 1), ") x ", np.format_float_scientific(Etot_times_k, precision=2), unit_E_times_k)
             
     return E_times_k, sigma_shift_sys, logRcut, gamma_nucl, gamma_p       

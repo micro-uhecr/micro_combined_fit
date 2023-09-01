@@ -14,22 +14,22 @@ from combined_fit import xmax_tools as xmax_tls
 COMBINED_FIT_BASE_DIR = pathlib.Path(__file__).parent.resolve()
 
 def Plot_spectrum(t, frac, A, Z, w_zR, w_zR_p, E_fit, hadr_model, isE3dJdE= True, isRenormalized = False, ext_save=""):
-    ''' Calculate the expected spectrum, compute the deviance with the experimental one and
+    """ Calculate the expected spectrum, compute the deviance with the experimental one and
     Plot the expected and the experimental spectrum above the threshold energy
 
     Parameters
     ----------
-    t : `tensor`
+    t: `tensor`
         tensor of extra-galactic propagation
-    frac : `list`
+    frac: `list`
         fractions at the source
-    A,Z : `list`
+    A,Z: `list`
         mass and charge of injected particles
-    w_zR : `list`
+    w_zR: `list`
         weights on z and R (redshift and rigidity)
-    E_fit : `float`
+    E_fit: `float`
         Energy bin from which the deviance is computed
-    hadr_model : `string`
+    hadr_model: `string`
         hadronic interaction model
     ext_save: `string`
         extension for the saved file
@@ -37,7 +37,7 @@ def Plot_spectrum(t, frac, A, Z, w_zR, w_zR_p, E_fit, hadr_model, isE3dJdE= True
     Returns
     -------
     None
-    '''
+    """
     logE,expected_spectrum, spectrum_per_inj, spectrum_det = Compute_expected_spectrum(t, frac, A, Z, w_zR, w_zR_p) # compute the expected spectrum
     experimental_spectrum = load_Spectrum_Data() # load the experimental spectrum
     experimental_proton = load_ProtonSpectrum_Data(hadr_model) # load the proton spectrum
@@ -49,28 +49,28 @@ def Plot_spectrum(t, frac, A, Z, w_zR, w_zR_p, E_fit, hadr_model, isE3dJdE= True
     draw.Draw_spectrum(		A, logE, expected_spectrum, spectrum_det, 		norm, E_fit, hadr_model, Dev = dev, isInjected  = False, isE3dJdE= isE3dJdE, saveTitlePlot = "uhecr_spectrum_det_"+ext_save) # plot the spectra as a function of detected mass
 
 def Compute_expected_spectrum(t, frac, A, Z, w_zR, w_zR_p):
-    ''' Compute the expected spectrum
+    """ Compute the expected spectrum
 
     Parameters
     ----------
-    t : `tensor`
+    t: `tensor`
         tensor of extra-galactic propagation
-    frac : `list`
+    frac: `list`
         fractions at the source
-    A,Z : `list`
+    A,Z: `list`
         mass and charge of injected particles
-    w_zR : `list`
+    w_zR: `list`
         weights on z and R (redshift and rigidity)
 
     Returns
     -------
-    logE : `list`
+    logE: `list`
         list of  energy bins as stored in the tensor
-    total_spectrum : `list`
+    total_spectrum: `list`
         total spectrum at the top of the atmosphere
-    spectrum_per_inj : `list`
+    spectrum_per_inj: `list`
         Injected spectra (for each injected particle) at the top of the atmosphere
-    '''
+    """
     #Load spectrum and fraction per injected mass
     spectrum_per_inj = []
     for i, a in enumerate(A):
@@ -93,26 +93,26 @@ def Compute_expected_spectrum(t, frac, A, Z, w_zR, w_zR_p):
     return logE, total_spectrum, spectrum_per_inj, det_spectra
 
 def Compute_integral_spectrum(t, frac, A, Z, w_zR, w_zR_p):
-    ''' Compute the integral spectrum above the minimum energy of the tensors
+    """ Compute the integral spectrum above the minimum energy of the tensors
 
     Parameters
     ----------
-    t : `tensor`
+    t: `tensor`
         tensor of extra-galactic propagation
-    frac : `list`
+    frac: `list`
         fractions at the source
-    A,Z : `list`
+    A,Z: `list`
         mass and charge of injected particles
-    w_zR : `list`
+    w_zR: `list`
         weights on z and R (redshift and rigidity)
 
     Returns
     -------
-    logEth : `float`
+    logEth: `float`
         threshold energy in log(eV)
-    total_flux : `list`
+    total_flux: `list`
         cosmic-ray flux in 1/(km2 sr yr)
-    '''
+    """
     #Load spectrum and fraction per injected mass
     spectrum_per_inj = []
     dlogE, ln10 = t[0].logE[1]-t[0].logE[0], np.log(10)
@@ -126,34 +126,34 @@ def Compute_integral_spectrum(t, frac, A, Z, w_zR, w_zR_p):
     return t[0].logE[0]-0.5*dlogE, np.sum(np.array(spectrum_per_inj))*ln10*dlogE
 
 def Compute_single_integrals(t, frac, A, Z, w_R, w_R_p):
-    ''' Compute the integral spectrum for a single galaxy above the minimum energy of the tensors
+    """ Compute the integral spectrum for a single galaxy above the minimum energy of the tensors
 
     Parameters
     ----------
-    t : `tensor`
+    t: `tensor`
         tensor of extra-galactic propagation
-    frac : `list`
+    frac: `list`
         fractions at the source
-    A,Z : `list`
+    A,Z: `list`
         mass and charge of injected particles
-    w_R : `list`
+    w_R: `list`
         weights vs rigidity for nuclei
-    w_R_p : `list`
+    w_R_p: `list`
         weights vs rigidity for protons
 
     Returns
     -------
-    logEth : `float`
+    logEth: `float`
         threshold energy in log(eV)
-    z : `float`
+    z: `float`
         threshold energy in log(eV)
-    total_flux : `list`
+    total_flux: `list`
         cosmic-ray flux in arbitrary units x 1/(km2 sr yr)
-    cum_weighted_R : `float`
+    cum_weighted_R: `float`
         cumulated weighted rigidity to compute mean observed rigidity
-    cum_weighs : `float`
+    cum_weighs: `float`
         cumulated weights to compute mean observed rigidity
-    '''
+    """
     #Load spectrum and fraction per injected mass
     spectrum_per_inj = []
     spectrum_per_Zdet, Rspectrum_per_Zdet = [], []
@@ -182,24 +182,24 @@ def Compute_single_integrals(t, frac, A, Z, w_R, w_R_p):
     return logEth, t[0].z, total_flux, cum_R, cum_w
 
 def Deviance_spectrum_proton_p(logE, expected_spectrum, experimental_spectrum, det_spectra, experimental_proton, E_fit, isRenormalized = False, verbose = False):
-    ''' Compute the deviance between the expected and the experimental spectrum  considering the proton component below the ankle energy
+    """ Compute the deviance between the expected and the experimental spectrum  considering the proton component below the ankle energy
 
     Parameters
     ----------
-    logE : `list`
+    logE: `list`
         list of  energy bins as stored in the tensor
-    expected_spectrum : `list`
+    expected_spectrum: `list`
         total expected spectrum at the top of the atmosphere
     experimental_spectrum: `Table`
         expected spepctrum (energy and flux)
-    E_fit : `float`
+    E_fit: `float`
         Energy bin from which the deviance is computed
 
     Returns
     -------
-    norm : `float`
+    norm: `float`
         normalization of the expected spectrum
-    '''
+    """
 
     #---------shift -----------#
     eneshift = 0
@@ -241,26 +241,26 @@ def Deviance_spectrum_proton_p(logE, expected_spectrum, experimental_spectrum, d
     return norm, dev_all+dev_p
 
 def Spectrum_Energy(Z, logR, gamma, logRcut):
-    ''' Build the expected spectrum starting from the parameters at the source
+    """ Build the expected spectrum starting from the parameters at the source
 
     initially flat between lRmin and lRmax
 
     Parameters
     ----------
-    Z : `list`
+    Z: `list`
         charge of injected particles
-    logR : `float`
+    logR: `float`
         log Rigidity for protons
     gamma: `float`
         spectral index of injected particles
-    logRcut : `float`
+    logRcut: `float`
         log Rigidity of the injected particles
 
     Returns
     -------
-    weights : `list`
+    weights: `list`
         weights in z and R
-    '''
+    """
     E = Z*np.power(10, logR)
     weights = np.power(E,-gamma+1)*(logR[1]-logR[0])*np.log(10)
 
@@ -271,22 +271,22 @@ def Spectrum_Energy(Z, logR, gamma, logRcut):
     return weights/np.sum(weights*E, axis=0)
 
 def weight_tensor(S_z, gamma, logRcut):
-    ''' Return the tensor weight account for evolution and spectral shape
+    """ Return the tensor weight account for evolution and spectral shape
 
     Parameters
     ----------
-    S_z : `1D function`
+    S_z: `1D function`
         evolution of the source density
     gamma: `float`
         spectral index of injected particles
-    logRcut : `float`
+    logRcut: `float`
         log Rigidity of the injected particles
 
     Returns
     -------
-    w_zR : `3D function`
+    w_zR: `3D function`
        function to weight the tensor
-'''
+"""
     unit_fact = constant._erg_to_eV*constant._c_ov_4pi/(constant._Mpc_2_km)**3#"Etot unit"x[km/(s.sr)]x"dt[s]"x "Tracer_unit per [km3]"
 
     w_R = lambda ZA, logR: Spectrum_Energy(ZA, logR, gamma, logRcut)
@@ -295,7 +295,7 @@ def weight_tensor(S_z, gamma, logRcut):
     return w_zR
 
 def load_Spectrum_Data():
-    ''' Upload the experimental spectrum
+    """ Upload the experimental spectrum
 
     Parameters
     ----------
@@ -303,26 +303,26 @@ def load_Spectrum_Data():
 
     Returns
     -------
-    T_J : `table`
+    T_J: `table`
        experimental spectrum as read in 'Data'
-'''
+"""
     filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Public_data/Spectrum/spectrum_combined.txt')
 
     return Table.read(filename, format='ascii.basic', delimiter=" ", guess=False)
 
 def load_ProtonSpectrum_Data(hadr_model):
-    ''' Upload the experimental spectrum
+    """ Upload the experimental spectrum
 
     Parameters
     ----------
-    hadr_model : `string`
+    hadr_model: `string`
         hadronic interaction model
 
     Returns
     -------
-    T_J : `table`
+    T_J: `table`
        experimental spectrum as read in 'Data'
-    '''
+    """
     #Load fractions
     filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Public_data/Composition/composition_fractions_icrc17.txt')
     t_frac = Table.read(filename, format='ascii.basic', delimiter="\t", guess=False)

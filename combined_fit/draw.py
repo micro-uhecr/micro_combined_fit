@@ -4,20 +4,42 @@ import matplotlib.pyplot as plt
 
 from combined_fit import spectrum as sp
 from combined_fit import constant
-from combined_fit import utilities
-
-from combined_fit import mass as M
 from combined_fit import xmax_tools as xmax_tls
 
 
-def MySaveFig(fig, pltname, pngsave=True):
-    print ('Saving plot as ' + pltname + '.pdf')
-    fig.savefig(pltname + '.pdf', dpi=300)
-    if pngsave:
-        fig.savefig(pltname + '.png', dpi=300)
+def MySaveFig(fig, plt_name, png_save=True):
+    """ Save a figur to pdf, and png if asked
+
+    Parameters
+    ----------
+    fig: `matplotlib.figure`
+        the plot to be saved
+    plt_name: `string`
+        the base file name
+    png_save: `bool`
+        set to True to save the figure also as png
+    Returns
+    -------
+    None
+    """
+    print ('Saving plot as ' + plt_name + '.pdf')
+    fig.savefig(plt_name + '.pdf', dpi=300)
+    if png_save:
+        fig.savefig(plt_name + '.png', dpi=300)
 
 
 def latex_float(f):
+    """ Format a float as a nice latex string
+
+    Parameters
+    ----------
+    f: `float`
+        just a float
+    Returns
+    -------
+    float_str: `string`
+        a float formatted as a nice latex string
+    """
     float_str = "{0:.2g}".format(f)
     if "e" in float_str:
         base, exponent = float_str.split("e")
@@ -26,7 +48,9 @@ def latex_float(f):
         return float_str
 
 
-def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, hadr_model, Dev = None, lEmin = 17.7, lEmax = 20.3, isInjected  = True, isE3dJdE= True, isSysDisplayed=False, saveTitlePlot=None):
+def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, hadr_model, Dev=None,
+                  lEmin=17.7, lEmax=20.3, isInjected=True, isE3dJdE=True, isSysDisplayed=False,
+                  saveTitlePlot=None):
     """ Plot the expected and the experimental spectrum above the threshold energy
 
     Parameters
@@ -51,7 +75,7 @@ def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, ha
     Returns
     -------
     None
-        """
+    """
     #Power to which energy is raised in plot e.g. 2 -> E2dJ/dE
     power_repr = 2
     if isE3dJdE: power_repr = 3
@@ -84,7 +108,7 @@ def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, ha
     #Plot setup
     fig = plt.subplots(figsize=(6, 4), nrows=1, ncols = 1)
     plt.subplots_adjust(bottom = 0.15, top = 0.92, left=0.15, right=0.96)
-    if Dev!=None:
+    if Dev is not None:
         N_J = len(plt_Proton_E) + len(exp_spectrum['logE'][MinBinNumber:])
         plt.title(r"$D_{\rm J} = $"+ str( np.around(Dev, decimals = 1)) + r" ($N_{\rm J} = $" + str(N_J)+")", ha="center", va = 'center', fontsize=12)
     plt.tick_params(top=True, right=True)
@@ -208,7 +232,7 @@ def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys 
     #Plot setup
     fig, axs = plt.subplots(figsize=(6, 4), nrows=2, ncols = 1, sharex=True)
     plt.subplots_adjust(bottom = 0.15, top = 0.92, left=0.15, right=0.96, hspace=0.0)
-    if Dev!=None:
+    if Dev is not None:
         N_X = len(experimental_xmax["fXmax"][MinBinData:]) + len(experimental_xmax["fRMS"][MinBinData:])
         axs[0].set_title(r"$D_{\rm X} = $"+ str( np.around(Dev, decimals = 1)) + r" ($N_{\rm X} = $" + str(N_X)+")", ha="center", va = 'center', fontsize=12)
 

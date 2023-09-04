@@ -69,8 +69,12 @@ The main dependencies are `matplotlib`, `numpy`, `astropy`, `pandas`, `scipy` an
 ## 3. github mirror
 > git clone https://github.com/micro-uhecr/micro-combined_fit.git
 
+# install and activate mamba as a solver
+> conda install -n base conda-libmamba-solver
+
 # create a new conda environment and activate it
 > cd micro_combined_fit
+> conda config --set solver libmamba
 > conda env create -f environment.yml
 > conda activate micro_combined_fit
 

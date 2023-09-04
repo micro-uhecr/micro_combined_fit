@@ -20,15 +20,12 @@ Not implemented yet.
 Installing from source
 -----------------------
 
-`combined_fit` shall be installed within a conda environment.
-Instructions below use `conda`, but we actually recommend the user to install
-and use `mamba` (https://mamba.readthedocs.io/en/latest/installation.html) for a faster installation.
+The code is based on python 3, and is meant to be run in its `conda` environment.
+The main dependencies are `matplotlib`, `numpy`, `astropy`, `pandas`, `scipy` and `iminuit`.
+
+A recent version of conda is needed (>22.11) so that one can activate mamba as a dependency solver.
 
 .. code-block:: bash
-
-  ## Install instructions
-  The code is based on python 3, and is meant to be run in its `conda` environment.
-  The main dependencies are `matplotlib`, `numpy`, `astropy`, `pandas`, `scipy` and `iminuit`.
 
   ### conda default environment
   ```
@@ -40,8 +37,12 @@ and use `mamba` (https://mamba.readthedocs.io/en/latest/installation.html) for a
   ## 3. github mirror
   > git clone https://github.com/micro-uhecr/micro-combined_fit.git
 
+  # install and activate mamba as a solver (as needed)
+  > conda install -n base conda-libmamba-solver
+
   # create a new conda environment and activate it
   > cd micro_combined_fit
+  > conda config --set solver libmamba
   > conda env create -f environment.yml
   > conda activate micro_combined_fit
 

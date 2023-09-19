@@ -14,7 +14,7 @@ Z    = [    1,     2,     7,    14,    26]
 
 #@nb.jit
 def upload_Tensor(logRmin=1, logEmin=1, is_PSB=False):
-    """Function which uploads the tensor
+    '''Function which uploads the tensor
 
     Parameters
     ----------
@@ -24,7 +24,7 @@ def upload_Tensor(logRmin=1, logEmin=1, is_PSB=False):
     -------
     Tensor: 'Table'
         Table which contains all the information about the tensor
-    """
+    '''
     
     if logEmin<logRmin:
         print("Minimum energy above which flux is computed is below logRmin")
@@ -43,16 +43,16 @@ def upload_Tensor(logRmin=1, logEmin=1, is_PSB=False):
 
 
 class CR_Table:
-    """ `CR_Table` is a class which allows to deal with the tensor
-    """
+    ''' `CR_Table` is a class which allows to deal with the tensor
+    '''
     def __init__(self, filename, zmin, zmax, logEmin=1, logRmin=1):
-        """ `CR_Table` constructor
+        ''' `CR_Table` constructor
 
         Parameters
         ----------
-        filename: `string`
+        filename : `string`
             path of the tensor
-        zmin, zmax: `float`
+        zmin, zmax : `float`
             range in energy
         logEmin: `float`
             minimal (injected) energy below which we do not read the tensor
@@ -60,7 +60,7 @@ class CR_Table:
          Returns
          -------
          None
-         """
+         '''
         t = np.load(filename)
         #Load variables from npz file
         ind = find_nearest_Ri_bin(t['logE'], [logEmin,0])[0]+1
@@ -109,7 +109,7 @@ class CR_Table:
         self.Z = np.array(Z_list)
 
     def logR2bin(self, logR):
-        """ Group logRi entries by logR bin
+        ''' Group logRi entries by logR bin
 
         Parameters
         ----------
@@ -118,33 +118,33 @@ class CR_Table:
 
         Returns
         -------
-        logR: `array`
+        logR : `array`
             center of the rigidity bins of the tensor
-        list_sel : `list`
+        list_sel  : `list`
             selected entries in the bin
-        """    
+        '''    
         dlR = 0.5*(self.logRi[1]- self.logRi[0])
         list_sel = [(logR>lRi-dlR)*(logR<=lRi+dlR) for lRi in self.logRi]
         
         return self.logRi, list_sel
     
     def sum_logR_z(self, a, weights=[]):
-        """ Contracting the tensor in z
+        ''' Contracting the tensor in z
 
         Parameters
         ----------
         self: `object`
             the `CR_Table` object
-        a: `tensor`
+        a : `tensor`
             Associated tensor
-        weights: `list`
+        weights : `list`
             weights in znp.
 
         Returns
         -------
-        res: `tensor`
+        res : `tensor`
             the numpy tensor with all the information
-        """
+        '''
         iz = np.where(np.array(a.shape) == self.z.size)
         iR = np.where(np.array(a.shape) == self.logRi.size)
         if((len(iz[0])==1) and (len(iR[0])==1)):
@@ -173,46 +173,46 @@ class CR_Table:
 
 
     def j_zE(self, a, w_R, ZA):
-        """ Create the expected spectrum given the parameters at a single source
+        ''' Create the expected spectrum given the parameters at a single source
 
         Parameters
         ----------
-        a: `tensor`
+        a : `tensor`
             Associated tensor
-        w_R: `list`
+        w_R : `list`
             weights in Rigidity
-        ZA: `list`
+        ZA : `list`
             charge of the injected particle A
 
         Returns
         -------
-        z: `array`
+        z : `array`
             redshifts
-        stacked_logR: `tensor`
+        stacked_logR : `tensor`
             flux for a single galaxy prop to km-2 sr-1 yr-1 eV-1
-        """
+        '''
 
         stacked_logR = self.sum_logR_Given_z(a, w_R(ZA, self.logRi))
 
         return stacked_logR
         
     def J_E(self, a, w_zR, ZA):
-        """ Create the expected spectrum given the parameters at the source
+        ''' Create the expected spectrum given the parameters at the source
 
         Parameters
         ----------
-        a: `tensor`
+        a : `tensor`
             Associated tensor
-        w_zR: `list`
+        w_zR : `list`
             weights in Rigidity and redshift
-        ZA: `list`
+        ZA : `list`
             charge of the injected particle A
 
         Returns
         -------
-        stacked_logR_z: `tensor`
+        stacked_logR_z : `tensor`
             flux in km-2 sr-1 yr-1 eV-1
-        """
+        '''
         zz, rr = np.meshgrid(self.z, self.logRi)
         stacked_logR_z = self.sum_logR_z(a, w_zR(ZA, zz,rr)*self.delta_z)
 
@@ -220,22 +220,22 @@ class CR_Table:
 
 #TBD fix to make it look nicer
 def Load_evol(file="sfrd_local.dat", zmin=2.33e-4, key ="sfrd"):#Minimum redshift of ~2E-4 corresponds to 1 Mpc
-    """ Load the chosen evolution of the source
+    ''' Load the chosen evolution of the source
 
     Parameters
     ----------
-    file: `string`
+    file : `string`
         name of the file in the folder Catalog which gives the evolution of sources
-    zmin: `float`
+    zmin : `float`
         minimum distance for the evolution of source
-    key: `string`
+    key : `string`
         Name of the column inside the file
 
     Returns
     -------
-    f_z: `function`
+    f_z : `function`
         a f
-    """
+    '''
 
     file = os.path.join(COMBINED_FIT_BASE_DIR, "../Catalog/" + file)
     tz = pd.read_csv(file, delimiter = " ")
@@ -267,19 +267,19 @@ def Load_evol(file="sfrd_local.dat", zmin=2.33e-4, key ="sfrd"):#Minimum redshif
 
 #TBD check if really needed
 def find_nearest_Ri_bin(array, value):
-    """ Give the nearest bin in array below the value for linear binning
+    ''' Give the nearest bin in array below the value for linear binning
 
     Parameters
     ----------
-    array: `array`
+    array : `array`
         array considered
-    value: `float`
+    value : `float`
 
     Returns
     -------
-    idx: `int`
+    idx : `int`
         The index of the array
-    """
+    '''
 
     idx = ((value-array[0])/(array[1]-array[0]))//1
     wrg = np.where(idx<0)[0]

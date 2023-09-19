@@ -9,7 +9,7 @@ import os
 
 from combined_fit import spectrum as sp
 from combined_fit import tensor as ts
-from combined_fit import constant, map, draw, utilities
+from combined_fit import constant, map, draw
 #os.environ['KMP_DUPLICATE_LIB_OK']='True'
 #TBD: implement another version of the code in the steady-state regime
 ### Main ##########################################################
@@ -17,7 +17,7 @@ if __name__ == "__main__":
 
 	################################# Inputs ##################################
 	###########################################################################
-
+	
 	# Threshold energy above which the map is computed and tensor
 	Dmin, Dcut = 0.01, 350#Mpc, minimum and maximum distance of the catalog
 	galCoord = True # galactic coordinates if True, equatorial otherwise
@@ -26,7 +26,7 @@ if __name__ == "__main__":
 	isSFR = True# True for SFRD, False for SMD
 
 	#Best-fit parameters, inferred with Examples/Fit.py
-	logRmin = 17.8 #Integrate the injected spectrum from logR_min to get total energy x k
+	logRmin = 17.8 #Integrate the injected spectrum from logR_min to get total energy x k	
 	Tensor = ts.upload_Tensor(logRmin = logRmin, logEmin = logEth_map)
 
 	A	= [	1,	 4,	14,	28,	56]
@@ -59,10 +59,10 @@ if __name__ == "__main__":
 	w_zR_nucl = sp.weight_tensor(S_z, gamma_nucl, logRcut)
 	w_zR_p = sp.weight_tensor(S_z, gamma_p, logRcut)
 
-	S_z_bckgnd_only = lambda z: S_z(z)*(constant._fz_DL(z)>Dcut)
+	S_z_bckgnd_only = lambda z: S_z(z)*(constant._fz_DL(z)>Dcut)	
 	w_zR_bckgnd_nucl = sp.weight_tensor(S_z_bckgnd_only, gamma_nucl, logRcut)
 	w_zR_bckgnd_p = sp.weight_tensor(S_z_bckgnd_only, gamma_p, logRcut)
-
+	
 	# Background and foreground flux
 	logEth, J_total = sp.Compute_integral_spectrum(Tensor, E_times_k, A, Z, w_zR_nucl, w_zR_p)
 	logEth, J_background = sp.Compute_integral_spectrum(Tensor, E_times_k, A, Z, w_zR_bckgnd_nucl, w_zR_bckgnd_p)
@@ -77,26 +77,26 @@ if __name__ == "__main__":
     # Get the catalog
 	galaxy_parameters = map.load_Catalog(galCoord, Dmin, Dcut, tracer=trac)
 	tensor_parameters = [Tensor, E_times_k, A, Z, logRcut, gamma_nucl, gamma_p]
-
+	
 	Rmean, map_as_in_spec_compo_fit =  map.map_arbitrary_units_all_galaxies(galaxy_parameters, tensor_parameters, k_transient, galCoord, nside)
-
+	
 	Rmean, map_arbitrary_units = map.map_arbitrary_units_with_all_cuts(galaxy_parameters, tensor_parameters, k_transient, galCoord, nside)
-
+	
 	aniso_Map = map_arbitrary_units*J_foreground/np.mean(map_as_in_spec_compo_fit)#mean could also be limited to declination range covered by Auger
 
 	####################### Sum ###############################################
 	# Smooth the flux map at physical angular scale
 	smooth = "fisher"
-	radius_Rmean = utilities.theta_mean_deg(Rmean) #deg
+	radius_Rmean = constant.theta_mean_deg(Rmean) #deg
 	text_deflection = r"$\theta = "+str(np.around(radius_Rmean, decimals = 1))+r"$°"
 	Flux_map = aniso_Map + iso_Map
 	if radius_Rmean>3:#if smaller than 3deg the smoothing is equivalent to nothing
 		Flux_map = map.LoadSmoothedMap(Flux_map, radius_Rmean, nside, smoothing=smooth)
 	print("Mean deflection", np.around(radius_Rmean, decimals = 1), "deg at R = ", np.around(Rmean, decimals = 1),"V")
-
-	# Smooth the flux map at display angular scale
+	
+	# Smooth the flux map at display angular scale	
 	smooth = "top-hat"
-	radius = 25 #deg
+	radius = 25 #deg	
 #	Flux_map = map.LoadSmoothedMap(Flux_map, radius, nside, smoothing=smooth)
 	print("Contrast ", np.around(np.max(Flux_map)/np.min(Flux_map), decimals = 1))
 	################################## Plots ##################################
@@ -115,5 +115,5 @@ if __name__ == "__main__":
 
 	#Plot
 	plt.rcParams.update({'font.size': 14,'legend.fontsize': 12})
-	map.PlotHPmap(norm_fact_title*Flux_map, nside, galCoord, title, color_bar_title, ax_title, fig_name = fig_name, write= SavePlot)
+	map.PlotHPmap(norm_fact_title*Flux_map, nside, galCoord, title, color_bar_title, ax_title, fig_name = fig_name, write= SavePlot)	
 	plt.show()

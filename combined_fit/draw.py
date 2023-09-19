@@ -4,10 +4,9 @@ import matplotlib.pyplot as plt
 
 from combined_fit import spectrum as sp
 from combined_fit import constant
-from combined_fit import utilities
-
 from combined_fit import mass as M
 from combined_fit import xmax_tools as xmax_tls
+from combined_fit import xmax_distr
 
 
 def MySaveFig(fig, pltname, pngsave=True):
@@ -27,31 +26,31 @@ def latex_float(f):
 
 
 def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, hadr_model, Dev = None, lEmin = 17.7, lEmax = 20.3, isInjected  = True, isE3dJdE= True, isSysDisplayed=False, saveTitlePlot=None):
-    """ Plot the expected and the experimental spectrum above the threshold energy
+    ''' Plot the expected and the experimental spectrum above the threshold energy
 
     Parameters
     ----------
-    A: `list`
+    A : `list`
         mass of injected particles
-    logE: `list`
+    logE : `list`
         list of  energy bins as stored in the tensor
     expected_spectrum: `list`
         total expected spectrum at the top of the atmosphere
     spectrum_per_mass: `list`
         total expected spectrum at the top of the atmosphere
-    norm: `float`
+    norm : `float`
         normalization of the expected spectrum
-    E_fit: `float`
+    E_fit : `float`
         Energy bin from which the deviance is computed
-    hadr_model: `string`
+    hadr_model : `string`
         hadronic interaction model
-    Dev: `float`
+    Dev : `float`
         Deviance if None, not printed
 
     Returns
     -------
     None
-        """
+        '''
     #Power to which energy is raised in plot e.g. 2 -> E2dJ/dE
     power_repr = 2
     if isE3dJdE: power_repr = 3
@@ -167,19 +166,19 @@ def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, ha
 
 
 def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys = 0, Dev=None, lEmin = 17.7, lEmax = 20.3, saveTitlePlot=None):
-    """Draw the experimental and the expected Xmax mean and sigma
+    '''Draw the experimental and the expected Xmax mean and sigma
 
     Parameters
     ----------
-    logE: `list`
+    logE : `list`
         energy bins from the read tensor
-    Xmax: `list`
+    Xmax : `list`
         mean Xmax (for different lgE)
     RMS: `list`
         Variance of Xmax (for different lgE)
-    experimental_xmax: `Table`
+    experimental_xmax : `Table`
         Xmax as read in data folder
-    E_fit: `float`
+    E_fit : `float`
         energy from which the deviance is computed
     model: `string`
         hadronic interaction model
@@ -189,7 +188,7 @@ def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys 
     Returns
     -------
     None
-    """
+    '''
 
     #Mean and RMS Xmax from models
     mass = [1, 4, 14, 56]
@@ -280,3 +279,136 @@ def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys 
     fig.align_ylabels(axs[:])
 
     if saveTitlePlot is not None: MySaveFig(fig, saveTitlePlot)
+### plot xmax distribution ###
+def Plot_Xmax_distribution(Tensor,frac,A,Z,w_zR,w_zR_p, E_th,xmax, model, exp_distributions_x,exp_distributions_y, convoluted_gumbel):
+    '''Plot the Xmax distributions
+
+    Parameters
+    ----------
+    t : `tensor`
+        upload tensor for the extra-galactic propagation
+    frac : `list`
+        fractions at the top of the atmosphere
+    A,Z: `list`
+        Mass and charge of the injected particles
+    w_zR : `list`
+        log Rigidity of the injected particles
+    E_th : `float`
+        energy from which the deviance is computed
+    xmax: `Table`
+        experimental xmax data (energy)
+    model: `string`
+        hadronic interaction model
+    exp_distributions_x : `list`
+        experimental distributions (x axis)
+    exp_distributions_y : `float`
+        experimental distributions (y axis)
+    convoluted_gumbel : `ndarray`
+        convoluted gumbel for each energy and mass
+
+    Returns
+    -------
+    None
+    '''
+
+
+    A_new, f_new = M.get_fractions_distributions(Tensor, frac, A, Z, w_zR,w_zR_p, xmax)
+
+    fig2 = plt.figure(figsize=(16,6))
+
+    group = Draw_Xmax_group(A,A_new,f_new,xmax['meanlgE'],exp_distributions_x, convoluted_gumbel)
+    Dev = 0
+    points = 0
+    for i in range(len(xmax['meanlgE'])):
+
+        sum = np.zeros((len(A_new),len(exp_distributions_x[i])))
+        f_new[i] = f_new[i]/np.sum (f_new[i])
+        for j in range(len(A_new)):
+            sum[j] = np.multiply(convoluted_gumbel[i][j], f_new[i][j])
+
+        final = np.sum(sum, axis = 0)/np.sum(f_new[i])
+
+        data = exp_distributions_y[i]
+        idk = data > 0
+
+        if xmax['maxlgE'][i] > E_th: points =(np.sum(np.multiply(idk,1)))
+        Dev = xmax_distr.deviance_Xmax_distr(data,final, xmax['nEntries'][i])
+        print(xmax['meanlgE'][i], " ", Dev, " ", points)
+
+        x = np.arange(0,2000,constant.dx)
+        min = int((np.min(exp_distributions_x[i])-(constant.dx/2))/constant.dx)
+        max = int((np.max(exp_distributions_x[i])+(constant.dx/2))/constant.dx)
+        x = x[min:max]
+        err = np.zeros(len(data))
+        for j in range (len(data)):
+            if data[j] > 0:
+                err[j] = np.sqrt(data[j])
+        err = err/np.sum(data)
+        data = data/np.sum(data)
+        if i >= 9:
+
+            ax2 = fig2.add_subplot(3, 3,i-8)
+            plt.errorbar(x[data> 0], data[data> 0], fmt='o', color = 'white', label = 'log(E/eV) = '+str(np.around(xmax['meanlgE'][i], decimals= 2)))
+            plt.errorbar(x[data> 0], data[data> 0],fmt='o', color = 'white', label = str(np.around(Dev, decimals= 1))+"/ "+str(np.around(points)))
+            plt.errorbar(x[data> 0], data[data> 0], fmt='o', color = 'black',   mfc='w', yerr = err[data> 0])
+            plt.plot(x, final, linewidth=2, linestyle='--', color ='brown')
+            #plt.text(1000,0.1, str(np.round(Dev,1)))
+
+            plt.xlim(600,1000)
+            if i == 12:
+                plt.ylabel(r' frequency')
+            if i == 16:
+                plt.xlabel(r'<$X_{\mathrm{max}}>  [\mathrm { g \ cm^{-2}}]$')
+
+            plt.legend(loc="upper right")
+
+            [plt.plot(x, group[i][h], linewidth=2, linestyle='-', color =constant.colors[h]) for h in range(len(A))]
+
+def Draw_Xmax_group(A,A_tot,frac,meanLgE,arr, convoluted_gumbel):
+    '''Print the gumbel function grouping the mass fractions
+
+    Parameters
+    ----------
+    A : `list`
+        mass at the injection
+    A_tot : `list`
+        mass in the atmosphere
+    frac : `list`
+        fractions at the top of the atmosphere
+    meanLgE : `list`
+        fractions at the top of the atmosphere
+    arr : `list`
+        fractions at the top of the atmosphere
+    convoluted_gumbel : `list`
+        fractions at the top of the atmosphere
+    model : `string`
+        hadronic interaction model
+
+    Returns
+    -------
+    total: 'list'
+        return the gumbel functions convoluted per groups
+    '''
+
+    total_group = []
+    for i in range( len(meanLgE)):
+        group = np.zeros((len(A),len(arr[i])))
+        frac[i] = frac[i]/np.sum (frac[i])
+        fG =[0,0,0,0,0]
+        for j in range(len(A_tot)):
+            if (A_tot[j] == 1):
+                fG[0] += frac[i][j]
+            if (A_tot[j] >= 2 and A_tot[j] <= 4 ):
+                fG[1] += frac[i][j]
+            if (A_tot[j] >= 5 and A_tot[j] <= 22 ):
+                fG[2] += frac[i][j]
+            if (A_tot[j] >= 23 and A_tot[j] <= 38 ):
+                fG[3] += frac[i][j]
+            if (A_tot[j] >= 39 and A_tot[j] <= 56):
+                fG[4] += frac[i][j]
+
+        for k,a in enumerate(A):
+
+            group[k] = np.multiply(convoluted_gumbel[i][a-1], fG[k])
+        total_group.append(group)
+    return total_group

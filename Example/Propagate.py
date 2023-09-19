@@ -6,11 +6,12 @@ import matplotlib.pyplot as plt
 from astropy.table import Table
 
 from combined_fit import spectrum as sp
-from combined_fit import constant,utilities
+from combined_fit import constant
 from combined_fit import mass
 from combined_fit import tensor as ts
 from combined_fit import draw
 
+from combined_fit import xmax_distr
 
 ### Main ##########################################################
 if __name__ == "__main__":
@@ -53,7 +54,21 @@ if __name__ == "__main__":
 
     plt.rcParams.update({'font.size': 14,'legend.fontsize': 12})
 
-    sp.Plot_spectrum(	Tensor, E_times_k, ts.A, ts.Z, w_zR_nucl, w_zR_p, logE_th, hadr_model, isE3dJdE= False, isRenormalized=False, ext_save=key)
-    mass.Plot_Xmax(		Tensor, E_times_k, sigma_shift_sys, ts.A, ts.Z, w_zR_nucl, w_zR_p, logE_th, hadr_model, ext_save=key)
+    #sp.Plot_spectrum(	Tensor, E_times_k, ts.A, ts.Z, w_zR_nucl, w_zR_p, logE_th, hadr_model, isE3dJdE= False, isRenormalized=False, ext_save=key)
+    #mass.Plot_Xmax(		Tensor, E_times_k, sigma_shift_sys, ts.A, ts.Z, w_zR_nucl, w_zR_p, logE_th, hadr_model, ext_save=key)
+    Xshift = -1
+    xmax,exp_distributions = xmax_distr.set_Xmax_distr(Xshift)
 
+    arr_reduced, exp_distribution_reduced = [], []
+    for i in range(len(xmax['meanlgE'])):
+        min = int(xmax['xMin'][i]/constant.dx)
+        max = int(xmax['xMax'][i]/constant.dx)
+        arr_reduced.append(np.arange(xmax['xMin'][i], xmax['xMax'][i], constant.dx)+(constant.dx/2))
+        exp_distribution_reduced.append(exp_distributions[i][min:max])
+
+    A_tot, frac = mass.get_fractions_distributions(Tensor, E_times_k, ts.A, ts.Z, w_zR_nucl,w_zR_p, xmax)
+    convoluted_gumbel = xmax_distr.Convolve_all(xmax,A_tot, arr_reduced, hadr_model)
+
+
+    draw.Plot_Xmax_distribution(Tensor,E_times_k,ts.A,ts.Z,w_zR_nucl,w_zR_p, logE_th,xmax, hadr_model, arr_reduced,exp_distribution_reduced, convoluted_gumbel)
     plt.show()

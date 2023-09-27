@@ -70,7 +70,7 @@ def read_Xmax_syst():
     return Table.read(filename, format='ascii.basic', delimiter=" ", guess=False)
 
 
-def set_Xmax_distr(Xshift):
+def set_Xmax_distr():
     ''' upload the Xmax Distribution
 
     Parameters
@@ -102,20 +102,7 @@ def set_Xmax_distr(Xshift):
     shift = 1 + dEnScale * eneshift
     t['minlgE'] += np.log10(shift)
     t['maxlgE'] += np.log10(shift)
-    #syst = read_Xmax_syst()
 
-    moments['sysXmax_Up'] = moments['sysXmax_Up'].astype('int64')
-    moments['sysXmax_Low'] = moments['sysXmax_Low'].astype('int64')
-
-    if (Xshift>0):
-        t['xMin'] += Xshift*moments['sysXmax_Up'][6:]
-        t['xMax'] += Xshift*moments['sysXmax_Up'][6:]
-    if (Xshift<0):
-        t['xMin'] += Xshift*moments['sysXmax_Low'][6:]
-        t['xMax'] -= Xshift*moments['sysXmax_Low'][6:]
-
-    print(t['xMin'], " ", t['xMax'])
-    #exit()
     '''------------- Shift ------------- '''
     k = t[subcolumn]
     arr = np.zeros((len(t['Index']),100))
@@ -135,6 +122,30 @@ def set_Xmax_distr(Xshift):
 
 
 def deviance_Xmax_distr(data, model, nentries):
+    ''' Compute the deviance of the Xmax distribution
+
+    Parameters
+    ----------
+    data : `list`
+        Experimental data
+    model : `list`
+        Expected model
+    nentries : `list`
+        Number of entries (at each energy bin) for the experimental distributions
+
+    Returns
+    -------
+    X,r: 'float'
+        return the acceptance function (x-y axis)
+    '''
+    idk = data > 0
+    llsat = np.sum(np.log(data[idk]/nentries)*data[idk])
+    llik = np.sum(np.log(model[idk])*data[idk])
+    Dev = -2 * (llik - llsat)
+
+    return Dev
+
+def deviance_Xmax_distr_test(data, model, nentries):
     ''' Compute the deviance of the Xmax distribution
 
     Parameters

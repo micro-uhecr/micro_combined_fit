@@ -234,7 +234,7 @@ def reduced_fractions(A_old, frac_old,size):
             frac[j][i] = np.sum(frac_old[j][np.where(A_old ==i)])
 
     return A, frac
-def compute_Distr_Deviance(A, frac,meanLgE, exp_distributions_x, exp_distributions_y, convoluted_gumbel, E_th, nEntries):
+def compute_Distr_Deviance(A, frac,meanLgE, exp_distributions_x, exp_distributions_y, convoluted_gumbel, E_th, nEntries, Xshift):
     '''Compute the deviance for Xmax distributions
 
     Parameters
@@ -255,14 +255,17 @@ def compute_Distr_Deviance(A, frac,meanLgE, exp_distributions_x, exp_distributio
         energy from which the deviance is computed
     nEntries : `list`
         number of entries of each Xmax distribution
+    Xshift : `double`
+            shift in Xmax
 
     Returns
     -------
     None
     '''
     Dev = 0
+    filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Private_data/ICRC2017/Xmax_moments_icrc17_v2.txt')
+    moments = Table.read(filename, format='ascii.basic', delimiter=" ", guess=False)
     BinNumberXmax = np.ndarray.item((np.argwhere(np.around(meanLgE, decimals=2)== E_th)))
-    print(BinNumberXmax)
     for i in range(BinNumberXmax, len(meanLgE)):
         sum = np.zeros((len(A),len(exp_distributions_x[i])))
         frac[i] = frac[i]/np.sum (frac[i])
@@ -270,10 +273,21 @@ def compute_Distr_Deviance(A, frac,meanLgE, exp_distributions_x, exp_distributio
         for j in range(len(A)):
             sum[j] = np.multiply(convoluted_gumbel[i][j], frac[i][j])
 
-        final = np.sum(sum, axis = 0)/np.sum(frac[i])
-        data = exp_distributions_y[i]
+        model = np.sum(sum, axis = 0)/np.sum(frac[i])
+        #data = exp_distributions_y[i]
 
-        Dev += xmax_distr.deviance_Xmax_distr(data,final, nEntries[i])
+        data_interpol = interpolate.interp1d(exp_distributions_x[i], exp_distributions_y[i], fill_value='extrapolate')
+        shift =0
+        #model_interpol = interpolate.interp1d(exp_distributions_x[i], final, fill_value='extrapolate')
+        # final = model_interpol(exp_distributions_x[i])
+        if (Xshift>0):
+            shift = Xshift*moments['sysXmax_Up'][6+i]
+        if (Xshift<0):
+            shift = Xshift*moments['sysXmax_Low'][6+i]
+        data = data_interpol(exp_distributions_x[i]+shift)
+        #print(meanLgE[i], " ", shift, " ",Xshift, " ", moments['sysXmax_Up'][6+i], " ", moments['sysXmax_Low'][6+i] )
+        Dev += xmax_distr.deviance_Xmax_distr(data,model, nEntries[i])
+
     return Dev
 
 def get_fractions_distributions(t,frac,A,Z,w_zR,w_zR_p, xmax):

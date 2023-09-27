@@ -26,10 +26,10 @@ if __name__ == "__main__":
     hadr_model = "Sibyll" #"Sibyll" or "EPOS-LHC"
     logRmin = 17.8 #Integrate the injected spectrum from logR_min to get total energy x k
     logE_th = 18.75 # Compute the all-particle spectral deviance from logE_th
-    isSFR = False # Or False for SMD
+    isSFR = True # Or False for SMD
 
     #Initial guess
-    sigma_shiftXmax = 1
+    sigma_shiftXmax = 0
     if isSFR:
         init_logRcut, init_gamma_nucl, init_gamma_p =  18.24, -0.46, 3.54
         init_E_times_k = [1.79E+46, 8.18E+45, 1.96E+46, 8.55E+45, 1.52E45]
@@ -54,8 +54,7 @@ if __name__ == "__main__":
     ################################### Fit ###################################
     ###########################################################################
     #---------- initializing the xmax distribution ------------------
-    Xshift = 0
-    xmax,exp_distributions = xmax_distr.set_Xmax_distr(Xshift)
+    xmax,exp_distributions = xmax_distr.set_Xmax_distr()
     arr_reduced, exp_distribution_reduced = [], []
     A_tot = np.arange(1,(ts.A[-1]+1))
     dx = 20
@@ -94,6 +93,6 @@ if __name__ == "__main__":
     plt.rcParams.update({'font.size': 14,'legend.fontsize': 12})
     sp.Plot_spectrum(	Tensor, E_times_k, ts.A, ts.Z, w_zR_nucl, w_zR_p, logE_th, hadr_model, isE3dJdE= False, ext_save=key)
     mass.Plot_Xmax(		Tensor, E_times_k, sigma_shift_sys, ts.A, ts.Z, w_zR_nucl, w_zR_p, logE_th, hadr_model, ext_save=key)
-    draw.Plot_Xmax_distribution(Tensor,E_times_k,ts.A,ts.Z,w_zR_nucl,w_zR_p, logE_th,xmax, hadr_model, arr_reduced,exp_distribution_reduced, convoluted_gumbel)
+    draw.Plot_Xmax_distribution(Tensor,E_times_k,ts.A,ts.Z,w_zR_nucl,w_zR_p, logE_th,xmax, hadr_model,sigma_shift_sys, arr_reduced,exp_distribution_reduced, convoluted_gumbel)
 
     plt.show()

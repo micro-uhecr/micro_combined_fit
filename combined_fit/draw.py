@@ -1,12 +1,19 @@
 import numpy as np
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+from scipy import interpolate
+from astropy.table import Table
+import os
+import pathlib
+
+
 
 from combined_fit import spectrum as sp
 from combined_fit import constant
 from combined_fit import mass as M
 from combined_fit import xmax_tools as xmax_tls
 from combined_fit import xmax_distr
+COMBINED_FIT_BASE_DIR = pathlib.Path(__file__).parent.resolve()
 
 
 def MySaveFig(fig, pltname, pngsave=True):
@@ -280,7 +287,7 @@ def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys 
 
     if saveTitlePlot is not None: MySaveFig(fig, saveTitlePlot)
 ### plot xmax distribution ###
-def Plot_Xmax_distribution(Tensor,frac,A,Z,w_zR,w_zR_p, E_th,xmax, model, exp_distributions_x,exp_distributions_y, convoluted_gumbel):
+def Plot_Xmax_distribution(Tensor,frac,A,Z,w_zR,w_zR_p, E_th,xmax, model,Xshift, exp_distributions_x,exp_distributions_y, convoluted_gumbel):
     '''Plot the Xmax distributions
 
     Parameters
@@ -299,6 +306,8 @@ def Plot_Xmax_distribution(Tensor,frac,A,Z,w_zR,w_zR_p, E_th,xmax, model, exp_di
         experimental xmax data (energy)
     model: `string`
         hadronic interaction model
+    model: `Double`
+        shift in Xmax
     exp_distributions_x : `list`
         experimental distributions (x axis)
     exp_distributions_y : `float`
@@ -319,6 +328,8 @@ def Plot_Xmax_distribution(Tensor,frac,A,Z,w_zR,w_zR_p, E_th,xmax, model, exp_di
     group = Draw_Xmax_group(A,A_new,f_new,xmax['meanlgE'],exp_distributions_x, convoluted_gumbel)
     Dev = 0
     points = 0
+    filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Private_data/ICRC2017/Xmax_moments_icrc17_v2.txt')
+    moments = Table.read(filename, format='ascii.basic', delimiter=" ", guess=False)
     for i in range(len(xmax['meanlgE'])):
 
         sum = np.zeros((len(A_new),len(exp_distributions_x[i])))
@@ -329,6 +340,14 @@ def Plot_Xmax_distribution(Tensor,frac,A,Z,w_zR,w_zR_p, E_th,xmax, model, exp_di
         final = np.sum(sum, axis = 0)/np.sum(f_new[i])
 
         data = exp_distributions_y[i]
+        data_interpol = interpolate.interp1d(exp_distributions_x[i], exp_distributions_y[i], fill_value='extrapolate')
+        shift =0
+        if (Xshift>0):
+            shift = Xshift*moments['sysXmax_Up'][6+i]
+        if (Xshift<0):
+            shift = Xshift*moments['sysXmax_Low'][6+i]
+        data = data_interpol(exp_distributions_x[i]+Xshift)
+
         idk = data > 0
 
         if xmax['maxlgE'][i] > E_th: points =(np.sum(np.multiply(idk,1)))

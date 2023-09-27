@@ -35,11 +35,12 @@ def Distr_Minimization(parms, args, w_zR,w_zR_p):
     convoluted_gumbel = args[9]
 
     #Computation##################################
+    sigma_shift_sys = parms[len(A)]
     nentries = xmax['nEntries']
     meanLgE = xmax['meanlgE']
-
+    print(sigma_shift_sys)
     A_new, f_new = mass.get_fractions_distributions(t, parms, A, Z, w_zR,w_zR_p,xmax)
-    Dev = mass.compute_Distr_Deviance(A_new, f_new, meanLgE, exp_distributions_x, exp_distributions_y, convoluted_gumbel, E_th, nentries)
+    Dev = mass.compute_Distr_Deviance(A_new, f_new, meanLgE, exp_distributions_x, exp_distributions_y, convoluted_gumbel, E_th, nentries, sigma_shift_sys)
 
     return Dev
 
@@ -197,6 +198,7 @@ def Minimize_Spectrum_And_Distribution(parms, args, verbose = True):
     gamma = parms[-2]
     gamma_p = parms[-1]
     S_z = args[-1]
+
     w_zR = sp.weight_tensor(S_z, gamma, logRcut)
     w_zR_p = sp.weight_tensor(S_z, gamma_p, logRcut)
 

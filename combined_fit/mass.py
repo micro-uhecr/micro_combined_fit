@@ -21,7 +21,7 @@ def Plot_Xmax(t, frac, sigma_shift_sys, A, Z, w_zR, w_zR_p, E_fit, model, ext_sa
     frac: `list`
         fractions at the top of the atmosphere
     sigma_shift_sys: `float`
-        shift of the model by nsigma_sys        
+        shift of the model by nsigma_sys
     A,Z: `list`
         Mass and charge of the injected particles
     w_zR: `list`
@@ -73,7 +73,7 @@ def expected_Xmax_sigmaXmax(t, frac, A, Z, w_zR, w_zR_p, model, sigma_shift_sys=
     A, frac_tot = get_fractions_p(t, frac, A, Z, w_zR, w_zR_p)
     lnA = np.log(A)
 
-    #Fraction shaping    
+    #Fraction shaping
     place = np.argwhere(np.sum(frac_tot, axis=0) != 0)
     index = np.ndarray.item(place[0])
     logE = logE[index:]
@@ -86,7 +86,7 @@ def expected_Xmax_sigmaXmax(t, frac, A, Z, w_zR, w_zR_p, model, sigma_shift_sys=
         mean_lnA.append(np.dot(frac_tot[i], lnA)/ np.sum(frac_tot[i]))
         Xmax.append(xmax_tls.getXmax(e, mean_lnA[i], model, sigma_shift_sys))
 
-    #Sigma Xmax model    
+    #Sigma Xmax model
     RMS = []
     for i, e in enumerate(logE):
         meanVXmax = np.sum(np.dot(xmax_tls.getVar_sh(e, lnA, model), frac_tot[i]))/np.sum(frac_tot[i], axis=0)
@@ -112,7 +112,7 @@ def compute_Xmax_Deviance(logE, Xmax, RMS, experimental_xmax, E_fit, sigma_shift
     E_fit: `float`
         energy from which the deviance is computed
     sigma_shift_sys: `float`
-        shift of the Xmax model by nsigma_sys        
+        shift of the Xmax model by nsigma_sys
     Returns
     -------
     None
@@ -120,14 +120,14 @@ def compute_Xmax_Deviance(logE, Xmax, RMS, experimental_xmax, E_fit, sigma_shift
     XmaxMean_E = interpolate.interp1d(logE, Xmax)
     RMS_E = interpolate.interp1d(logE, RMS)
 
-    BinNumberXmax = np.ndarray.item(np.argwhere(np.around(experimental_xmax['meanLgE'], decimals=2)== E_fit))  
+    BinNumberXmax = np.ndarray.item(np.argwhere(np.around(experimental_xmax['meanLgE'], decimals=2)== E_fit))
     res_Xmax = 		( experimental_xmax["fXmax"][BinNumberXmax:] - XmaxMean_E(experimental_xmax["meanLgE"][BinNumberXmax:]) )/ experimental_xmax['statXmax'][BinNumberXmax:]
     res_sigmaXmax = ( experimental_xmax['fRMS'][BinNumberXmax:] - RMS_E(experimental_xmax["meanLgE"][BinNumberXmax:]) ) / experimental_xmax['statRMS'][BinNumberXmax:]
-    
+
     Dev = sigma_shift_sys**2 + np.sum(res_Xmax**2 + res_sigmaXmax**2)
 
     if verbose: print("Composition deviance, from logE=", experimental_xmax['meanLgE'][BinNumberXmax],": ", Dev , "(",len(experimental_xmax['fXmax']) + len(experimental_xmax['fRMS']) - 2*BinNumberXmax, ")")
-    
+
     return Dev
 
 
@@ -165,7 +165,7 @@ def get_fractions_p(t, frac, A, Z, w_zR, w_zR_p):
 
     A = np.concatenate(sel_A)
     frac_tot = np.concatenate(fractions, axis=0)
-    
+
     return A, frac_tot
 
 
@@ -187,7 +187,7 @@ def reduced_fractions(A_old, frac_old,size):
     frac: `list`
         Mass fractions at the top of the atmosphere  (56)
     """
-    
+
     #TBD: could likely be fastened
     A = np.zeros(56)
     frac = np.zeros((size,56))
@@ -209,5 +209,7 @@ def load_Xmax_data():
     Table: `read`
         experimental data
     """
-    filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Public_data/Composition/Xmax_moments_icrc17_v2.txt')
+    #filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Public_data/Composition/Xmax_moments_icrc17_v2.txt')
+    filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Public_data/Composition/Xmax_moments_icrc23.txt')
+
     return Table.read(filename, format='ascii.ecsv', delimiter=" ", guess=False)

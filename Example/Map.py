@@ -36,10 +36,10 @@ if __name__ == "__main__":
 		key, trac = "sfrd", "logSFR"#solar mass / (yr.Mpc3), mass/yr
 		k_transient = 1E-4# best-case for B_LS = 10 nG
 		text_k = r"$k = "+ draw.latex_float(k_transient) + r"\, M_\odot^{-1}$"
-		logRcut, gamma_nucl, gamma_p =  18.24, -0.46, 3.54
-		E_times_k = [1.79E+46, 8.18E+45, 1.96E+46, 8.55E+45, 1.52E45]
-		unit_E_times_k = "erg per solar mass"
-		sigma_shift_sys = 0.87
+        logRcut, gamma_nucl, gamma_p =  18.24, -0.46, 3.54
+        E_times_k = [1.79E+46, 8.18E+45, 1.96E+46, 8.55E+45, 1.52E45]
+        unit_E_times_k = "erg per solar mass"
+        sigma_shift_sys = 0.87
 	else:
 		key, trac = "smd", "logM*"#solar mass / Mpc3, mass
 		k_transient = 1E-15# best-case for B_LS = 10 nG

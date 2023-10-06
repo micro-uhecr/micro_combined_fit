@@ -4,6 +4,8 @@ import matplotlib.pyplot as plt
 
 from combined_fit import spectrum as sp
 from combined_fit import constant
+from combined_fit import utilities
+
 from combined_fit import mass as M
 from combined_fit import xmax_tools as xmax_tls
 
@@ -25,31 +27,31 @@ def latex_float(f):
 
 
 def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, hadr_model, Dev = None, lEmin = 17.7, lEmax = 20.3, isInjected  = True, isE3dJdE= True, isSysDisplayed=False, saveTitlePlot=None):
-    ''' Plot the expected and the experimental spectrum above the threshold energy
+    """ Plot the expected and the experimental spectrum above the threshold energy
 
     Parameters
     ----------
-    A : `list`
+    A: `list`
         mass of injected particles
-    logE : `list`
+    logE: `list`
         list of  energy bins as stored in the tensor
     expected_spectrum: `list`
         total expected spectrum at the top of the atmosphere
     spectrum_per_mass: `list`
         total expected spectrum at the top of the atmosphere
-    norm : `float`
+    norm: `float`
         normalization of the expected spectrum
-    E_fit : `float`
+    E_fit: `float`
         Energy bin from which the deviance is computed
-    hadr_model : `string`
+    hadr_model: `string`
         hadronic interaction model
-    Dev : `float`
+    Dev: `float`
         Deviance if None, not printed
 
     Returns
     -------
     None
-        '''
+        """
     #Power to which energy is raised in plot e.g. 2 -> E2dJ/dE
     power_repr = 2
     if isE3dJdE: power_repr = 3
@@ -66,7 +68,7 @@ def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, ha
     MinBinNumber = np.ndarray.item(np.argwhere(exp_spectrum['logE'] == E_fit))
 
     #Proton spectral points
-    exp_proton = sp.load_ProtonSpectrum_Data(hadr_model)#eV, eV-1 km-2 yr-1 sr-1
+    exp_proton = sp.load_ProtonSpectrum_Data_2023(hadr_model)#eV, eV-1 km-2 yr-1 sr-1
     norm_repr_p = np.power(10,power_repr*exp_proton['logE'])#
     plt_Proton_spectrum = norm_repr_p*exp_proton['J']#
     plt_Proton_Err_up = norm_repr_p*exp_proton['J_up']#
@@ -97,7 +99,7 @@ def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, ha
 
     #Plot data points
     if not isInjected:
-        plt.errorbar(plt_Proton_E, plt_Proton_spectrum, yerr=[plt_Proton_Err_low, plt_Proton_Err_up], fmt='s',  mfc='none', color='tab:red', label = r"$p$ ("+hadr_model+", Mayotte+ '23)")
+    plt.errorbar(plt_Proton_E, plt_Proton_spectrum, yerr=[plt_Proton_Err_low, plt_Proton_Err_up], fmt='s',  mfc='none', color='tab:red', label = r"$p$ ("+hadr_model+", Mayotte+ '23)")
     plt.errorbar(exp_spectrum['logE'], plt_Data_spectrum, yerr=[plt_Data_Err_low, plt_Data_Err_up], fmt='o',  mfc='none', color='gray')
     plt.errorbar(exp_spectrum['logE'][MinBinNumber:], plt_Data_spectrum[MinBinNumber:], yerr=[plt_Data_Err_low[MinBinNumber:], plt_Data_Err_up[MinBinNumber:]], fmt='o',  mfc='none', color='k', label = r"$p + {}^A_Z{X}$ (Auger '21) ")
 
@@ -165,19 +167,19 @@ def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, ha
 
 
 def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys = 0, Dev=None, lEmin = 17.7, lEmax = 20.3, saveTitlePlot=None):
-    '''Draw the experimental and the expected Xmax mean and sigma
+    """Draw the experimental and the expected Xmax mean and sigma
 
     Parameters
     ----------
-    logE : `list`
+    logE: `list`
         energy bins from the read tensor
-    Xmax : `list`
+    Xmax: `list`
         mean Xmax (for different lgE)
     RMS: `list`
         Variance of Xmax (for different lgE)
-    experimental_xmax : `Table`
+    experimental_xmax: `Table`
         Xmax as read in data folder
-    E_fit : `float`
+    E_fit: `float`
         energy from which the deviance is computed
     model: `string`
         hadronic interaction model
@@ -187,7 +189,7 @@ def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys 
     Returns
     -------
     None
-    '''
+    """
 
     #Mean and RMS Xmax from models
     mass = [1, 4, 14, 56]
@@ -201,7 +203,7 @@ def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys 
     #Data
     experimental_xmax["sysRMS_low"] = experimental_xmax["sysRMS_low"]* -1
     experimental_xmax["sysXmax_low"] = experimental_xmax["sysXmax_low"]* -1
-    MinBinData =  np.ndarray.item(np.argwhere(np.round(experimental_xmax["meanLgE"],2) == E_fit))
+    MinBinData =  np.ndarray.item(np.argwhere(experimental_xmax["meanLgE"] == E_fit))
 
     #Plot setup
     fig, axs = plt.subplots(figsize=(6, 4), nrows=2, ncols = 1, sharex=True)
@@ -224,7 +226,7 @@ def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys 
 
     #Plot data points w/ stat. uncertainty
     axs[0].errorbar(experimental_xmax["meanLgE"], experimental_xmax["fXmax"], fmt='o',yerr = experimental_xmax["statXmax"], mfc='none', color = 'tab:gray')
-    axs[0].errorbar(experimental_xmax["meanLgE"][MinBinData:], experimental_xmax["fXmax"][MinBinData:],yerr = experimental_xmax["statXmax"][MinBinData:], fmt='o', mfc='none', color = 'k', label = "Yushkov+ '19")
+    axs[0].errorbar(experimental_xmax["meanLgE"][MinBinData:], experimental_xmax["fXmax"][MinBinData:],yerr = experimental_xmax["statXmax"][MinBinData:], fmt='o', mfc='none', color = 'k', label = "Fitoussi+ '23")
 
     #Plot bounds w/ stat + sys
     Xmax_upper_stat_sys = experimental_xmax["fXmax"] + np.sqrt(experimental_xmax["statXmax"]**2 + experimental_xmax["sysXmax_up"]**2)

@@ -40,7 +40,7 @@ def Plot_spectrum(t, frac, A, Z, w_zR, w_zR_p, E_fit, hadr_model, isE3dJdE= True
     """
     logE,expected_spectrum, spectrum_per_inj, spectrum_det = Compute_expected_spectrum(t, frac, A, Z, w_zR, w_zR_p) # compute the expected spectrum
     experimental_spectrum = load_Spectrum_Data() # load the experimental spectrum
-    experimental_proton = load_ProtonSpectrum_Data(hadr_model) # load the proton spectrum
+    experimental_proton = load_ProtonSpectrum_Data_2023(hadr_model) # load the proton spectrum
 
     norm, dev = Deviance_spectrum_proton_p(logE, expected_spectrum, experimental_spectrum, spectrum_det, experimental_proton, E_fit, isRenormalized = isRenormalized) # if isRenormalized = True, the overall normalisation minimizing the spectral deviance for fixed fractions can be determined (norm = 1 by default, so that input values keep real units)
     if isRenormalized: print("Normalization factor:",norm)
@@ -341,6 +341,56 @@ def load_ProtonSpectrum_Data(hadr_model):
     keys_in = ['meanLgE', 'p'+ext, 'p_err_low'+ext, 'p_err_up'+ext, 'p_sys_low'+ext, 'p_sys_up'+ext]
     keys_out = ['logE', 'J', 'J_low', 'J_up', 'J_sys_low', 'J_sys_up']
     f = copy.copy(t_frac['p'+ext])
+    t_proton = t_frac[keys_in]
+    for i, k in enumerate(keys_in): t_proton.rename_column(k, keys_out[i])
+
+    #Load all-particle spectrum
+    experimental_spectrum = load_Spectrum_Data()
+    interp_data = interpolate.interp1d(experimental_spectrum['logE'], experimental_spectrum['J'])
+    interp_err = {  'J_low': interpolate.interp1d(experimental_spectrum['logE'], experimental_spectrum['J_low']),
+                    'J_up': interpolate.interp1d(experimental_spectrum['logE'], experimental_spectrum['J_up']),
+                    'J_sys_low': interpolate.interp1d(experimental_spectrum['logE'], experimental_spectrum['J_sys_low']),
+                    'J_sys_up': interpolate.interp1d(experimental_spectrum['logE'], experimental_spectrum['J_sys_up'])}
+
+    #Multiply fraction by spectrum and compute uncertainties
+    spectrum = interp_data(t_proton['logE'])
+    for k in keys_out[1:]: t_proton[k]*=spectrum
+    for k in keys_out[2:]: t_proton[k] = np.sqrt(t_proton[k]**2 + f**2*interp_err[k](t_proton['logE'])**2)
+
+    return t_proton
+
+def load_ProtonSpectrum_Data_2023(hadr_model):
+    ''' Upload the experimental spectrum
+
+    Parameters
+    ----------
+    hadr_model : `string`
+        hadronic interaction model
+
+    Returns
+    -------
+    T_J : `table`
+       experimental spectrum as read in 'Data'
+    '''
+    #Load fractions
+    filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Public_data/Composition/ICRC2023/Auger_FD_ICRC2023_XmaxFractions.dat')
+    t_frac = Table.read(filename, format='ascii.basic', delimiter=" ", guess=False)
+
+    #Remove HEAT-based data below 17.8
+    t_frac = t_frac[t_frac['meanlgE']>17.8]
+
+    #Build proton spectrum from given HIM
+    if hadr_model not in xmax_tls.HIM_list :
+        print("Hadronic interaction model not valid! ", hadr_model)
+        sys.exit(0)
+    if hadr_model == "EPOS-LHC": ext = '_eposlhc'
+    else: ext = '_sib23'
+    #Load fractions
+
+
+    keys_in = ['meanlgE', 'proton'+ext, 'proton'+ext+'_staterr_dn', 'proton'+ext+'_staterr_up', 'proton'+ext+'_syserr_dn', 'proton'+ext+'_syserr_up']
+    keys_out = ['logE', 'J', 'J_low', 'J_up', 'J_sys_low', 'J_sys_up']
+    f = copy.copy(t_frac['proton'+ext])
     t_proton = t_frac[keys_in]
     for i, k in enumerate(keys_in): t_proton.rename_column(k, keys_out[i])
 

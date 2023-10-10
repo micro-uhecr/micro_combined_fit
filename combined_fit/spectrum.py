@@ -310,55 +310,6 @@ def load_Spectrum_Data():
 
     return Table.read(filename, format='ascii.basic', delimiter=" ", guess=False)
 
-def load_ProtonSpectrum_Data_old(hadr_model):
-    """ Upload the experimental spectrum
-
-    Parameters
-    ----------
-    hadr_model: `string`
-        hadronic interaction model
-
-    Returns
-    -------
-    T_J: `table`
-       experimental spectrum as read in 'Data'
-    """
-    #Load fractions
-    filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Public_data/Composition/ICRC2017/composition_fractions_icrc17.txt')
-    t_frac = Table.read(filename, format='ascii.basic', delimiter="\t", guess=False)
-
-    #Remove HEAT-based data below 17.8
-    t_frac = t_frac[t_frac['meanLgE']>17.8]
-
-    #Build proton spectrum from given HIM
-    if hadr_model not in xmax_tls.HIM_list :
-        print("Hadronic interaction model not valid! ", hadr_model)
-        sys.exit(0)
-    if hadr_model == "EPOS-LHC": ext = '_EPOS'
-    elif hadr_model == "QGSJET-II04": ext = '_QGS'
-    else: ext = '_SIB'
-
-    keys_in = ['meanLgE', 'p'+ext, 'p_err_low'+ext, 'p_err_up'+ext, 'p_sys_low'+ext, 'p_sys_up'+ext]
-    keys_out = ['logE', 'J', 'J_low', 'J_up', 'J_sys_low', 'J_sys_up']
-    f = copy.copy(t_frac['p'+ext])
-    t_proton = t_frac[keys_in]
-    for i, k in enumerate(keys_in): t_proton.rename_column(k, keys_out[i])
-
-    #Load all-particle spectrum
-    experimental_spectrum = load_Spectrum_Data()
-    interp_data = interpolate.interp1d(experimental_spectrum['logE'], experimental_spectrum['J'])
-    interp_err = {  'J_low': interpolate.interp1d(experimental_spectrum['logE'], experimental_spectrum['J_low']),
-                    'J_up': interpolate.interp1d(experimental_spectrum['logE'], experimental_spectrum['J_up']),
-                    'J_sys_low': interpolate.interp1d(experimental_spectrum['logE'], experimental_spectrum['J_sys_low']),
-                    'J_sys_up': interpolate.interp1d(experimental_spectrum['logE'], experimental_spectrum['J_sys_up'])}
-
-    #Multiply fraction by spectrum and compute uncertainties
-    spectrum = interp_data(t_proton['logE'])
-    for k in keys_out[1:]: t_proton[k]*=spectrum
-    for k in keys_out[2:]: t_proton[k] = np.sqrt(t_proton[k]**2 + f**2*interp_err[k](t_proton['logE'])**2)
-
-    return t_proton
-
 def load_ProtonSpectrum_Data(hadr_model):
     ''' Upload the experimental spectrum
 

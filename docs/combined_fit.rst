@@ -43,15 +43,6 @@ tensor interface
     :members:
     :undoc-members:
 
-xmax_distr interface
-====================
-
-`combined_fit.xmax_distr`
--------------------------
-
-.. automodule:: combined_fit.xmax_distr
-    :members:
-    :undoc-members:
 
 xmax_tools interface
 ====================

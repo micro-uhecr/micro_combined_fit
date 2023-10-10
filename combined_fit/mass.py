@@ -4,7 +4,6 @@ import numpy as np
 
 from scipy import interpolate
 from astropy.table import Table
-from combined_fit import xmax_distr
 
 from combined_fit import xmax_tools as xmax_tls
 from combined_fit import draw
@@ -38,7 +37,7 @@ def Plot_Xmax(t, frac, sigma_shift_sys, A, Z, w_zR, w_zR_p, E_fit, model, ext_sa
     None
         '''
     logE, Xmax, RMS = expected_Xmax_sigmaXmax(t, frac, A, Z, w_zR, w_zR_p, model, sigma_shift_sys)
-    Experimental_Xmax = load_Xmax_data_test()#load_Xmax_data()
+    Experimental_Xmax = load_Xmax_data()#load_Xmax_data()
     dev = compute_Xmax_Deviance(logE, Xmax, RMS, Experimental_Xmax, E_fit, sigma_shift_sys) # computation of deviance
     draw.Draw_Xmax(logE, Xmax, RMS, Experimental_Xmax, E_fit, model, sigma_shift_sys*xmax_tls._sysXmax, dev,  saveTitlePlot = "uhecr_atmospheric_depth_"+ext_save)
 
@@ -186,9 +185,6 @@ def get_fractions_p(t, frac, A, Z, w_zR, w_zR_p):
         Mass at the top of the atmosphere
     frac_def: `list`
         Mass fractions at the top of the atmosphere
-                #if (i == 0):
-                    #je = t[i].J_E(t[i].tensor_stacked, w_zR_p, Z[i])
-                #else:
     '''
     sel_A, fractions = [], []
     for i,a in enumerate(A):
@@ -343,22 +339,5 @@ def load_Xmax_data():
     Table: `read`
         experimental data
     '''
-    filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Public_data/Composition/ICRC2017/Xmax_moments_icrc17_v2.txt')
-    return Table.read(filename, format='ascii.ecsv', delimiter=" ", guess=False)
-
-
-def load_Xmax_data_test():
-    '''Upload the experimental data (Xmax) for a given Hadronic Interaction model
-
-    Parameters
-    -------
-
-    Returns
-    -------
-    Table: `read`
-        experimental data
-    '''
     filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Public_data/Composition/ICRC2023/Xmax_moments_icrc23.txt')
-    f = Table.read(filename, format='ascii.ecsv', delimiter=" ", guess=False)
-
-    return f
+    return Table.read(filename, format='ascii.ecsv', delimiter=" ", guess=False)

@@ -40,7 +40,7 @@ def Plot_spectrum(t, frac, A, Z, w_zR, w_zR_p, E_fit, hadr_model, isE3dJdE= True
     """
     logE,expected_spectrum, spectrum_per_inj, spectrum_det = Compute_expected_spectrum(t, frac, A, Z, w_zR, w_zR_p) # compute the expected spectrum
     experimental_spectrum = load_Spectrum_Data() # load the experimental spectrum
-    experimental_proton = load_ProtonSpectrum_Data_2023(hadr_model) # load the proton spectrum
+    experimental_proton = load_ProtonSpectrum_Data(hadr_model) # load the proton spectrum
 
     norm, dev = Deviance_spectrum_proton_p(logE, expected_spectrum, experimental_spectrum, spectrum_det, experimental_proton, E_fit, isRenormalized = isRenormalized) # if isRenormalized = True, the overall normalisation minimizing the spectral deviance for fixed fractions can be determined (norm = 1 by default, so that input values keep real units)
     if isRenormalized: print("Normalization factor:",norm)
@@ -310,7 +310,7 @@ def load_Spectrum_Data():
 
     return Table.read(filename, format='ascii.basic', delimiter=" ", guess=False)
 
-def load_ProtonSpectrum_Data(hadr_model):
+def load_ProtonSpectrum_Data_old(hadr_model):
     """ Upload the experimental spectrum
 
     Parameters
@@ -324,7 +324,7 @@ def load_ProtonSpectrum_Data(hadr_model):
        experimental spectrum as read in 'Data'
     """
     #Load fractions
-    filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Public_data/Composition/composition_fractions_icrc17.txt')
+    filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Public_data/Composition/ICRC2017/composition_fractions_icrc17.txt')
     t_frac = Table.read(filename, format='ascii.basic', delimiter="\t", guess=False)
 
     #Remove HEAT-based data below 17.8
@@ -359,7 +359,7 @@ def load_ProtonSpectrum_Data(hadr_model):
 
     return t_proton
 
-def load_ProtonSpectrum_Data_2023(hadr_model):
+def load_ProtonSpectrum_Data(hadr_model):
     ''' Upload the experimental spectrum
 
     Parameters

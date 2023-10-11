@@ -20,7 +20,7 @@ if __name__ == "__main__":
 
 	# Threshold energy above which the map is computed and tensor
 	Dmin, Dcut = 0.01, 350#Mpc, minimum and maximum distance of the catalog
-	galCoord = True # galactic coordinates if True, equatorial otherwise
+	galCoord = False # galactic coordinates if True, equatorial otherwise
 	logEth_map = 19.6#Threshold energy for computation
 	SavePlot = False#True to save the map
 	isSFR = True# True for SFRD, False for SMD

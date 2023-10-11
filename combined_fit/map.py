@@ -532,11 +532,13 @@ def map_arbitrary_units_with_all_cuts(galaxy_parameters, tensor_parameters, k_tr
 	weights_galaxies = []
 
 	# select the galaxies behind Virgo
-	dist0, l0, b0, R500, logM500 = utilities.load_virgo_properties(galCoord)
-	sel_Virgo = sel_gal_behind(galCoord, dist0, l0, b0, dist, l, b, 3*R500)
+	dist0, l0,b0, R500, logM500 = utilities.load_virgo_properties(galCoord)
+	for j,a in enumerate(dist0):
+		sel_cluster = sel_gal_behind(galCoord, dist0[j], l0[j], b0[j], dist, l, b, 3*R500[j])
+		if(j == 0): sel_Virgo = sel_cluster
+		sel_Virgo = np.logical_or(sel_cluster, sel_Virgo)
 	sel_NonShadowed = np.invert(sel_Virgo)
-
-	# bin galaxies by maximum rigidity
+		# bin galaxies by maximum rigidity
 	if k_transient is None: logRcut_galaxies = Tensor[0].logRi[-1]*np.ones_like(dist)#maximum possible rigidity
 	else: logRcut_galaxies = utilities.logRcut_transient(k_transient, dist, lum)
 	list_logRmax, sel_logRmax = Tensor[0].logR2bin(logRcut_galaxies)
@@ -568,14 +570,15 @@ def map_arbitrary_units_with_all_cuts(galaxy_parameters, tensor_parameters, k_tr
 		sel = sel_Virgo*sel_lR
 		if np.sum(sel)>0:
 			# define the function returning the weights
-			w_R = lambda Z, logR: ws_R[i](Z, logR)*utilities.transparency_cluster(logM500, isProton=False)(logR)
-			w_R_p = lambda Z, logR: ws_R_p[i](Z, logR)*utilities.transparency_cluster(logM500, isProton=True)(logR)
-			logEth, z_tab, weight_z, cum_weighted_R, cum_weights = sp.Compute_single_integrals(Tensor, E_times_k, A, Z, w_R, w_R_p)
-			def fweight_d(d): return interpolate.interp1d(constant._fz_DL(z_tab), weight_z)(d)
+			for j in range(len(logM500)):
+				w_R = lambda Z, logR: ws_R[i](Z, logR)*utilities.transparency_cluster(logM500[j], isProton=False)(logR)
+				w_R_p = lambda Z, logR: ws_R_p[i](Z, logR)*utilities.transparency_cluster(logM500[j], isProton=True)(logR)
+				logEth, z_tab, weight_z, cum_weighted_R, cum_weights = sp.Compute_single_integrals(Tensor, E_times_k, A, Z, w_R, w_R_p)
+				def fweight_d(d): return interpolate.interp1d(constant._fz_DL(z_tab), weight_z)(d)
 
-			#return the selection and flux weights
-			wflux = fweight_d(dist[sel])* lum[sel]/dist[sel]**2
-			weights_galaxies.append([sel, wflux, cum_weighted_R, cum_weights])
+				#return the selection and flux weights
+				wflux = fweight_d(dist[sel])* lum[sel]/dist[sel]**2
+				weights_galaxies.append([sel, wflux, cum_weighted_R, cum_weights])
 
 	# Load anisotropic map
 	Rmean, map_arbitrary_units = load_Map_from_Catalog(galCoord, nside, l, b, weights_galaxies)

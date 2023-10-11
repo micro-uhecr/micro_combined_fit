@@ -4,11 +4,13 @@ from combined_fit import constant
 
 
 def load_virgo_properties(galCoord):
-    dist0, R_500 = 15, 0.8#Mpc
-    logM500 = np.log10(1.2E14)
-    if galCoord: l0, b0 = 279.676173, 74.459570
-    else: l0, b0 = 186.633700, 12.723300
-    return dist0, l0, b0, R_500, logM500
+    if galCoord:
+         l0 = constant.l0_gal #279.676173, 74.459570
+         b0 = constant.b0_gal
+    else:
+        l0 = constant.l0_eq #186.633700, 12.723300
+        b0 = constant.b0_eq
+    return constant.dist_clusters, l0,b0, constant.R_500, constant.logM500
 
 
 def transparency_cluster(logM500, isProton):

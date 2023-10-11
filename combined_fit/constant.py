@@ -63,3 +63,12 @@ B_IGMF_nG, lc_IGMF_kpc, Lmax_IGMF_Mpc = 1E-4, 1E3, 1e10
 B_default = [[B_GMF_nG, lc_GMF_kpc, Lmax_GMF_Mpc],\
             [B_LGMF_nG, lc_LGMF_kpc, Lmax_LGMF_Mpc],\
             [B_IGMF_nG, lc_IGMF_kpc, Lmax_IGMF_Mpc]]
+
+
+dist_clusters = 15,74 #Virgo, Perseus
+logM500 = np.log10(1.2E14), np.log10(5.8E14)
+l0_gal = 279.676173, 150.572468
+b0_gal = 74.459570, -13.261685
+l0_eq = 186.633700, 49.9467009
+b0_eq = 12.723300, 41.513100
+R_500 = 0.77,1.28

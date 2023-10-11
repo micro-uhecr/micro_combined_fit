@@ -532,12 +532,12 @@ def map_arbitrary_units_with_all_cuts(galaxy_parameters, tensor_parameters, k_tr
 	weights_galaxies = []
 
 	# select the galaxies behind Virgo
-	dist0, l0,b0, R500, logM500 = utilities.load_virgo_properties(galCoord)
+	dist0, l0,b0, R500, logM500 = utilities.load_cluster_properties(galCoord)
 	for j,a in enumerate(dist0):
 		sel_cluster = sel_gal_behind(galCoord, dist0[j], l0[j], b0[j], dist, l, b, 3*R500[j])
-		if(j == 0): sel_Virgo = sel_cluster
-		sel_Virgo = np.logical_or(sel_cluster, sel_Virgo)
-	sel_NonShadowed = np.invert(sel_Virgo)
+		if(j == 0): sel_cluster_tot = sel_cluster
+		sel_cluster_tot = np.logical_or(sel_cluster, sel_cluster_tot)
+	sel_NonShadowed = np.invert(sel_cluster_tot)
 		# bin galaxies by maximum rigidity
 	if k_transient is None: logRcut_galaxies = Tensor[0].logRi[-1]*np.ones_like(dist)#maximum possible rigidity
 	else: logRcut_galaxies = utilities.logRcut_transient(k_transient, dist, lum)
@@ -567,7 +567,7 @@ def map_arbitrary_units_with_all_cuts(galaxy_parameters, tensor_parameters, k_tr
 	# load weights for galaxies behind Virgo
 	for i, sel_lR in enumerate(sel_logRmax):
 		# select
-		sel = sel_Virgo*sel_lR
+		sel = sel_cluster_tot*sel_lR
 		if np.sum(sel)>0:
 			# define the function returning the weights
 			for j in range(len(logM500)):

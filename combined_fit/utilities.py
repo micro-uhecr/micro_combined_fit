@@ -3,7 +3,7 @@ from scipy import interpolate, integrate
 from combined_fit import constant
 
 
-def load_virgo_properties(galCoord):
+def load_cluster_properties(galCoord):
     if galCoord:
          l0 = constant.l0_gal #279.676173, 74.459570
          b0 = constant.b0_gal

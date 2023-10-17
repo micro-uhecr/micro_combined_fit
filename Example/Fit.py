@@ -24,13 +24,13 @@ if __name__ == "__main__":
     hadr_model = "Sibyll" #"Sibyll" or "EPOS-LHC"
     logRmin = 17.8 #Integrate the injected spectrum from logR_min to get total energy x k
     logE_th = 18.75 # Compute the all-particle spectral deviance from logE_th
-    isSFR = False # Or False for SMD
+    isSFR = True # Or False for SMD
 
     #Initial guess
-    sigma_shiftXmax = 1
+    sigma_shiftXmax = 1.2
     if isSFR:
-        init_logRcut, init_gamma_nucl, init_gamma_p =  18.28, -0.37, 2.65
-        init_E_times_k = [9.01e+45, 6.81e+45, 2.3e+46, 7.12e+45, 1.69e+45]
+        init_logRcut, init_gamma_nucl, init_gamma_p =  18.28, -0.36, 2.64
+        init_E_times_k = [9.1e+45, 6.8e+45, 2.3e+46, 7.1e+45, 1.7e+45]
         bnds_E_times_k = [[1E40, 1E50]]*len(ts.A)
         unit_E_times_k = "erg per solar mass"
     else:

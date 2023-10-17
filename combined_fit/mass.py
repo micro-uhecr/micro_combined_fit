@@ -230,60 +230,6 @@ def reduced_fractions(A_old, frac_old,size):
             frac[j][i] = np.sum(frac_old[j][np.where(A_old ==i)])
 
     return A, frac
-def compute_Distr_Deviance(A, frac,meanLgE, exp_distributions_x, exp_distributions_y, convoluted_gumbel, E_th, nEntries, Xshift):
-    '''Compute the deviance for Xmax distributions
-
-    Parameters
-    ----------
-    A : `list`
-        mass at the top of the atmosphere
-    frac : `list`
-        mass fraction at the top of the atmosphere
-    meanLgE: `list`
-        energy bins from the read xmax distributions
-    exp_distributions_x : `list`
-        experimental Xmax distribution (x-axis)
-    exp_distributions_y : `list`
-        experimental Xmax distribution (y-axis)
-    convoluted_gumbel : `ndarray`
-        convoluted gumbel functions for each mass and energy
-    E_th : `float`
-        energy from which the deviance is computed
-    nEntries : `list`
-        number of entries of each Xmax distribution
-    Xshift : `double`
-            shift in Xmax
-
-    Returns
-    -------
-    None
-    '''
-    Dev = Xshift**2
-    filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Private_data/ICRC2017/Xmax_moments_icrc17_v2.txt')
-    moments = Table.read(filename, format='ascii.basic', delimiter=" ", guess=False)
-    BinNumberXmax = np.ndarray.item((np.argwhere(np.around(meanLgE, decimals=2)== E_th)))
-    for i in range(BinNumberXmax, len(meanLgE)):
-        sum = np.zeros((len(A),len(exp_distributions_x[i])))
-        frac[i] = frac[i]/np.sum (frac[i])
-
-        for j in range(len(A)):
-            sum[j] = np.multiply(convoluted_gumbel[i][j], frac[i][j])
-
-        model = np.sum(sum, axis = 0)/np.sum(frac[i])
-        #data = exp_distributions_y[i]
-
-        data_interpol = interpolate.interp1d(exp_distributions_x[i], exp_distributions_y[i], fill_value='extrapolate')
-        shift =0
-        #model_interpol = interpolate.interp1d(exp_distributions_x[i], final, fill_value='extrapolate')
-        # final = model_interpol(exp_distributions_x[i])
-        if (Xshift>0):
-            shift = Xshift*moments['sysXmax_Up'][6+i]
-        if (Xshift<0):
-            shift = -Xshift*moments['sysXmax_Low'][6+i]
-        data = data_interpol(exp_distributions_x[i]+shift)
-        Dev += xmax_distr.deviance_Xmax_distr(data,model, nEntries[i])
-
-    return Dev
 
 def get_fractions_distributions(t,frac,A,Z,w_zR,w_zR_p, xmax):
     '''Provide the mass fraction at the top of the atmosphere for a given choice of the parameters at the source
@@ -323,8 +269,6 @@ def get_fractions_distributions(t,frac,A,Z,w_zR,w_zR_p, xmax):
         for k in range (index):
             frac_def[j] += frac_tot[j+k+start]
 
-
-
     A_new , frac_new = reduced_fractions(A, frac_def,np.size(xmax['meanlgE']))
     return A_new, frac_new
 
@@ -341,3 +285,44 @@ def load_Xmax_data():
     '''
     filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Public_data/Composition/ICRC2023/Xmax_moments_icrc23.txt')
     return Table.read(filename, format='ascii.ecsv', delimiter=" ", guess=False)
+    
+def load_Fractions_Data(hadr_model):
+    ''' Upload the experimental spectrum
+
+    Parameters
+    ----------
+    hadr_model : `string`
+        hadronic interaction model
+
+    Returns
+    -------
+    T_J : `table`
+       experimental spectrum as read in 'Data'
+    '''
+    #Load fractions
+    filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Public_data/Composition/ICRC2023/composition_fractions_icrc2023.txt')
+    t_frac = Table.read(filename, format='ascii.basic', delimiter="\t", guess=False)
+
+    #Remove HEAT-based data below 17.8
+    t_frac = t_frac[t_frac['meanLgE']>17.8]
+
+    #Build proton spectrum from given HIM
+    if hadr_model not in xmax_tls.HIM_list :
+        print("Hadronic interaction model not valid! ", hadr_model)
+        sys.exit(0)
+    if hadr_model == "EPOS-LHC": ext = '_EPOS'
+    else: ext = '_SIB'
+    
+    #Load fractions
+    keys_in = ['meanLgE', 'p'+ext, 'p_err_low'+ext, 'p_err_up'+ext, 'p_sys_low'+ext, 'p_sys_up'+ext]
+    keys_in += [	'He'+ext, 'He_err_low'+ext, 'He_err_up'+ext, 'He_sys_low'+ext, 'He_sys_up'+ext]
+    keys_in += [	'N'+ext, 'N_err_low'+ext, 'N_err_up'+ext, 'N_sys_low'+ext, 'N_sys_up'+ext]
+    keys_in += [	'Fe'+ext, 'Fe_err_low'+ext, 'Fe_err_up'+ext, 'Fe_sys_low'+ext, 'Fe_sys_up'+ext]
+
+    keys_out = ['meanLgE', 'p', 'p_err_low', 'p_err_up', 'p_sys_low', 'p_sys_up']
+    keys_out += [	'He', 'He_err_low', 'He_err_up', 'He_sys_low', 'He_sys_up']
+    keys_out += [	'N', 'N_err_low', 'N_err_up', 'N_sys_low', 'N_sys_up']
+    keys_out += [	'Fe', 'Fe_err_low', 'Fe_err_up', 'Fe_sys_low', 'Fe_sys_up']
+    for i, k in enumerate(keys_in): t_frac.rename_column(k, keys_out[i])
+
+    return t_frac

@@ -22,7 +22,7 @@ def transparency_cluster(logM500, isProton):
     Gamma = 2/(1+10**(-sigma*(logM500-logM_free)))
 
     logR = np.linspace(17,23, 60)
-    logf = np.zeros_like(logR)#TBD: check with Antonio his actual formula (10^1 = 10... not 1)
+    logf = np.zeros_like(logR)
     sel = logR < lrho
     logf[sel] += Gamma*(logR[sel]-lrho)
 

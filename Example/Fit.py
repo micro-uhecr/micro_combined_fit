@@ -72,6 +72,6 @@ if __name__ == "__main__":
 
     plt.rcParams.update({'font.size': 14,'legend.fontsize': 12})
     sp.Plot_spectrum(	Tensor, E_times_k, ts.A, ts.Z, w_zR_nucl, w_zR_p, logE_th, hadr_model, isE3dJdE= False, ext_save=key)
-    mass.Plot_Xmax(		Tensor, E_times_k, sigma_shift_sys, ts.A, ts.Z, w_zR_nucl, w_zR_p, logE_th, hadr_model, ext_save=key)
+    mass.Plot_Xmax(	Tensor, E_times_k, sigma_shift_sys, ts.A, ts.Z, w_zR_nucl, w_zR_p, logE_th, hadr_model, ext_save=key)
 
     plt.show()

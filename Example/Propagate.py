@@ -30,17 +30,17 @@ if __name__ == "__main__":
     #Best-fit parameters, inferred with Examples/Fit.py
     if isSFR:
         key = "sfrd"#solar mass / (yr.Mpc3)
-        logRcut, gamma_nucl, gamma_p =  18.28, -0.37, 2.65
-        E_times_k = [9.01e+45, 6.81e+45, 2.3e+46, 7.12e+45, 1.69e+45]
+        logRcut, gamma_nucl, gamma_p =  18.28, -0.36, 2.64
+        E_times_k = [9.06E+45, 6.79E+45, 2.30E+46, 7.11E+45, 1.69E+45]
         unit_E_times_k = "erg per solar mass"
-        sigma_shift_sys = 1.19
+        sigma_shift_sys = 1.20
     else:
         key = "smd"    #solar mass / Mpc3
-        logRcut, gamma_nucl, gamma_p =  18.41, 0.62, 3.04
-        E_times_k = [2.28e+36, 2.16e+35, 1.33e+36 , 1.81e+35, 1.76e+35]
+        logRcut, gamma_nucl, gamma_p =  18.41, 0.62, 3.02
+        E_times_k = [2.27E+36, 2.13E+35, 1.33E+36, 1.78E+35, 1.77E+35]
         unit_E_times_k = "erg per solar mass per year"
-        sigma_shift_sys = 1.53
-
+        sigma_shift_sys = 1.54
+		
     ################################# Tensor ##################################
     ###########################################################################
     S_z = ts.Load_evol(file = key+"_local.dat", key=key)

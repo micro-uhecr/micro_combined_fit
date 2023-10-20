@@ -504,7 +504,7 @@ def map_arbitrary_units_all_galaxies(galaxy_parameters, tensor_parameters, k_tra
 	return Rmean, map_arbitrary_units
 
 
-def map_arbitrary_units_with_all_cuts(galaxy_parameters, tensor_parameters, k_transient, galCoord, nside):
+def map_arbitrary_units_with_all_cuts(galaxy_parameters, tensor_parameters, k_transient, galCoord, nside, save_weights_galaxies=False):
 	''' Produce a map with all the galaxies (including clusters effects)
 
 	Parameters
@@ -538,7 +538,7 @@ def map_arbitrary_units_with_all_cuts(galaxy_parameters, tensor_parameters, k_tr
 		if(j == 0): sel_cluster_tot = sel_cluster
 		sel_cluster_tot = np.logical_or(sel_cluster, sel_cluster_tot)
 	sel_NonShadowed = np.invert(sel_cluster_tot)
-		# bin galaxies by maximum rigidity
+	# bin galaxies by maximum rigidity
 	if k_transient is None: logRcut_galaxies = Tensor[0].logRi[-1]*np.ones_like(dist)#maximum possible rigidity
 	else: logRcut_galaxies = utilities.logRcut_transient(k_transient, dist, lum)
 	list_logRmax, sel_logRmax = Tensor[0].logR2bin(logRcut_galaxies)
@@ -550,6 +550,7 @@ def map_arbitrary_units_with_all_cuts(galaxy_parameters, tensor_parameters, k_tr
 		ws_R_p.append(lambda Z, logR: sp.Spectrum_Energy(Z, logR, gamma_p, logRcut)*(logR<list_logRmax[i]))
 
 	# load weights for non-shadowed galaxies
+	n_t, l_t, b_t, d_t, w_t = [], [], [], [], []
 	for i, sel_lR in enumerate(sel_logRmax):
 		# select
 		sel = sel_NonShadowed*sel_lR
@@ -564,6 +565,21 @@ def map_arbitrary_units_with_all_cuts(galaxy_parameters, tensor_parameters, k_tr
 			wflux = fweight_d(dist[sel])* lum[sel]/dist[sel]**2
 			weights_galaxies.append([sel, wflux, cum_weighted_R, cum_weights])
 
+#Here output weights for non shadowed galaxies
+			if save_weights_galaxies:
+				n_t += list(name[sel])
+				l_t+= list(l[sel])
+				b_t+= list(b[sel])
+				d_t+= list(dist[sel])
+				w_t+= list(wflux)
+
+	if save_weights_galaxies:
+		table = Table([n_t, l_t, b_t, d_t, w_t] , names = ['name','l','b','d','w'])
+		table['l'].unit = u.deg
+		table['b'].unit = u.deg
+		table['d'].unit = u.Mpc   
+		table.write('weights_galaxies.dat', format='ascii.ecsv', overwrite=True)			
+				
 	# load weights for galaxies behind Virgo
 	for i, sel_lR in enumerate(sel_logRmax):
 		# select

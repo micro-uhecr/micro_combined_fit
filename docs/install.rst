@@ -3,19 +3,6 @@
 Installing combined_fit
 =======================
 
-At some point you will be able to install `combined_fit` with `pip` or from source.
-
-
-Installing a release with pip
------------------------------
-
-Not implemented yet.
-
-.. code-block:: bash
-
-    pip install combined_fit
-
-
 
 Installing from source in a conda environment
 ---------------------------------------------

@@ -7,22 +7,49 @@ import healpy as hp
 from scipy import interpolate
 import os
 
+from astropy.coordinates import SkyCoord, ICRS, Galactic
+
 from combined_fit import spectrum as sp
 from combined_fit import tensor as ts
 from combined_fit import constant, map, draw, utilities
-#os.environ['KMP_DUPLICATE_LIB_OK']='True'
-#TBD: implement another version of the code in the steady-state regime
+
+def contrast_hotspot(Flux_map, lHot, bHot, nside, galCoord, isAuger):
+	npix = hp.nside2npix(nside)
+	theta, phi = hp.pix2ang(nside, np.arange(npix))
+	ra, dec = map.HealpyCoordToMap(galCoord, phi, theta)
+	if galCoord: c = SkyCoord(l=ra, b=dec, frame='galactic', unit="rad")
+	else: c = SkyCoord(ra=ra, dec=dec, frame='icrs', unit="rad")
+
+	if isAuger: sel_dec = c.icrs.dec.degree <= 45 
+	else: sel_dec = c.icrs.dec.degree >= -15 
+	
+	cHot = SkyCoord(l=lHot, b=bHot, frame='galactic', unit="deg")
+	selHot = c.separation(cHot).deg < 40
+	
+	i_max = np.argmax(Flux_map[selHot])
+	l_max, b_max = c.galactic.l.degree[selHot][i_max], c.galactic.b.degree[selHot][i_max] 
+	cmax = SkyCoord(l=l_max, b=b_max, frame='galactic', unit="deg")
+	dist = cmax.separation(cHot).deg
+	
+	return np.max(Flux_map[selHot])/np.mean(Flux_map[sel_dec]), dist, l_max, b_max 
+
+
 ### Main ##########################################################
 if __name__ == "__main__":
+
 
 	################################# Inputs ##################################
 	###########################################################################
 
+	# Hotspot parameters
+	logEth_map, lHot, bHot = 19.6, 305, 16#Auger hotspot
+	#logEth_map, lHot, bHot = 19.7, 176, 45#TA hotspot
+
+
 	# Threshold energy above which the map is computed and tensor
 	Dmin, Dcut = 0.01, 350#Mpc, minimum and maximum distance of the catalog
 	galCoord = True # galactic coordinates if True, equatorial otherwise
-	logEth_map = 19.6#Threshold energy for computation
-	SavePlot = False#True to save the map
+	ShowMap, SavePlot = True, True#True to save the map
 	isSFR = True# True for SFRD, False for SMD
 
 	#Best-fit parameters, inferred with Examples/Fit.py
@@ -34,20 +61,20 @@ if __name__ == "__main__":
 	hadr_model = "Sibyll" #for the record
 	if isSFR:
 		key, trac = "sfrd", "logSFR"#solar mass / (yr.Mpc3), mass/yr
-		k_transient = 1E-4# best-case for B_LS = 10 nG
+		k_transient =2E-4# best-case for B_LS = 10 nG
 		text_k = r"$k = "+ draw.latex_float(k_transient) + r"\, M_\odot^{-1}$"
-		logRcut, gamma_nucl, gamma_p =  18.24, -0.46, 3.54
-		E_times_k = [1.79E+46, 8.18E+45, 1.96E+46, 8.55E+45, 1.52E45]
+		logRcut, gamma_nucl, gamma_p =  18.28, -0.36, 2.64
+		E_times_k = [9.06E+45, 6.79E+45, 2.30E+46, 7.11E+45, 1.69E+45]
 		unit_E_times_k = "erg per solar mass"
-		sigma_shift_sys = 0.87
+		sigma_shift_sys = 1.20
 	else:
 		key, trac = "smd", "logM*"#solar mass / Mpc3, mass
-		k_transient = 1E-15# best-case for B_LS = 10 nG
+		k_transient = 3E-15# best-case for B_LS = 10 nG
 		text_k = r"$\dot{k} = "+ draw.latex_float(k_transient) + r"\, M_\odot^{-1}\, {yr}^{-1}$"
-		logRcut, gamma_nucl, gamma_p =  18.33, 0.30, 3.44
-		E_times_k = [2.63E+36, 6.20E+35, 9.23E+35, 3.73E+35, 1.36E35]
+		logRcut, gamma_nucl, gamma_p =  18.41, 0.62, 3.02
+		E_times_k = [2.27E+36, 2.13E+35, 1.33E+36, 1.78E+35, 1.77E+35]
 		unit_E_times_k = "erg per solar mass per year"
-		sigma_shift_sys = 1.00
+		sigma_shift_sys = 1.54
 
 
 	################# Compute the flux map ####################################
@@ -74,7 +101,7 @@ if __name__ == "__main__":
 	iso_Map = np.ones(hp.nside2npix(nside))*J_background
 
 	####################### Foreground ########################################
-    # Get the catalog
+	# Get the catalog
 	galaxy_parameters = map.load_Catalog(galCoord, Dmin, Dcut, tracer=trac)
 	tensor_parameters = [Tensor, E_times_k, A, Z, logRcut, gamma_nucl, gamma_p]
 
@@ -97,23 +124,29 @@ if __name__ == "__main__":
 	# Smooth the flux map at display angular scale
 	smooth = "top-hat"
 	radius = 25 #deg
-#	Flux_map = map.LoadSmoothedMap(Flux_map, radius, nside, smoothing=smooth)
-	print("Contrast ", np.around(np.max(Flux_map)/np.min(Flux_map), decimals = 1))
+	Flux_map = map.LoadSmoothedMap(Flux_map, radius, nside, smoothing=smooth)
+
+	cA = contrast_hotspot(Flux_map, nside=nside, galCoord=galCoord, lHot = 305, bHot = 16, isAuger=True)#Auger hotspot
+	cTA = contrast_hotspot(Flux_map, nside=nside, galCoord=galCoord, lHot = 176, bHot = 45, isAuger=False)#TA hotspot
+
+	print("B[nG] / k / Contrast_Auger / Contrast_TA", "{:.2e}".format(constant.B_LGMF_nG), "{:.2e}".format(k_transient), np.around(cA, decimals=2), np.around(cTA, decimals=2) ) 
+
 	################################## Plots ##################################
 	###########################################################################
 
 	#Display parameters of the maps
-	if galCoord: ax_title = "Galactic coordinates"
-	else: ax_title = "Equatorial coordinates"
-	fig_name = "uhecr_fluxmap_"+str(np.around(logEth, decimals=2))+"_"+key+"_"+str(np.around(constant.B_LGMF_nG, decimals=2))+"_"+str(k_transient)
-	if smooth=="fisher": tex_ang = r"\theta"
-	elif smooth=="top-hat": tex_ang = r"\Psi"
-	Eth = np.around(np.power(10,logEth-18)).astype(int)
-	norm_fact_title = 1E3
-	color_bar_title = r"$\Phi_{\rm "+ key +r"}(>" + str(Eth) + r"\, {\rm EeV},\, "+tex_ang+" = "+ str(radius) +r"$°)"+ r"  $[10^{-3}\ \rm km^{-2}\, yr^{-1}\, sr^{-1}]$"
-	title = text_k+", "+text_deflection+r" ($B_{\rm LS} ="+str(constant.B_LGMF_nG) +r"\,$nG)"
+	if ShowMap:
+		if galCoord: ax_title = "Galactic coordinates"
+		else: ax_title = "Equatorial coordinates"
+		fig_name = "uhecr_fluxmap_"+str(np.around(logEth, decimals=2))+"_"+key+"_"+str(np.around(constant.B_LGMF_nG, decimals=2))+"_"+str(k_transient)
+		if smooth=="fisher": tex_ang = r"\theta"
+		elif smooth=="top-hat": tex_ang = r"\Psi"
+		Eth = np.around(np.power(10,logEth-18)).astype(int)
+		norm_fact_title = 1E3
+		color_bar_title = r"$\Phi_{\rm "+ key +r"}(>" + str(Eth) + r"\, {\rm EeV},\, "+tex_ang+" = "+ str(radius) +r"$°)"+ r"  $[10^{-3}\ \rm km^{-2}\, yr^{-1}\, sr^{-1}]$"
+		title = text_k+", "+text_deflection+r" ($B_{\rm LS} ="+str(constant.B_LGMF_nG) +r"\,$nG)"
 
-	#Plot
-	plt.rcParams.update({'font.size': 14,'legend.fontsize': 12})
-	map.PlotHPmap(norm_fact_title*Flux_map, nside, galCoord, title, color_bar_title, ax_title, fig_name = fig_name, write= SavePlot)
-	plt.show()
+		#Plot
+		plt.rcParams.update({'font.size': 14,'legend.fontsize': 12})
+		map.PlotHPmap(norm_fact_title*Flux_map, nside, galCoord, title, color_bar_title, ax_title, fig_name = fig_name, write= SavePlot)
+		plt.show()

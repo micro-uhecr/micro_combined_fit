@@ -3,12 +3,14 @@ from scipy import interpolate, integrate
 from combined_fit import constant
 
 
-def load_virgo_properties(galCoord):
-    dist0, R_500 = 15, 0.8#Mpc
-    logM500 = np.log10(1.2E14)
-    if galCoord: l0, b0 = 279.676173, 74.459570
-    else: l0, b0 = 186.633700, 12.723300
-    return dist0, l0, b0, R_500, logM500
+def load_cluster_properties(galCoord):
+    if galCoord:
+         l0 = constant.l0_gal #279.676173, 74.459570
+         b0 = constant.b0_gal
+    else:
+        l0 = constant.l0_eq #186.633700, 12.723300
+        b0 = constant.b0_eq
+    return constant.dist_clusters, l0,b0, constant.R_500, constant.logM500
 
 
 def transparency_cluster(logM500, isProton):
@@ -20,7 +22,7 @@ def transparency_cluster(logM500, isProton):
     Gamma = 2/(1+10**(-sigma*(logM500-logM_free)))
 
     logR = np.linspace(17,23, 60)
-    logf = np.zeros_like(logR)#TBD: check with Antonio his actual formula (10^1 = 10... not 1)
+    logf = np.zeros_like(logR)
     sel = logR < lrho
     logf[sel] += Gamma*(logR[sel]-lrho)
 

@@ -17,42 +17,42 @@ COMBINED_FIT_BASE_DIR = pathlib.Path(__file__).parent.resolve()
 
 
 def PlotHPmap(HPmap, nside, galCoord, title, color_bar_title, ax_title, fig_name, plot_zoa=True, write=False, projection="hammer", cmap='afmhot', vmin=-1, vmax=-1):
-	""" Plot a healpy max
+	''' Plot a healpy max
 
 	Parameters
 	----------
-	HPmap: `numpy array`
+	HPmap : `numpy array`
 		HealPy map
-	nside: `int`
+	nside : `int`
 		nside associated to HPmap
-	galCoord: `bool`
+	galCoord : `bool`
 		If galCoord = True, load data in Galactic coordinates. Equatorial coordinates otherwise
-	title: `string`
+	title : `string`
 		title of the graph
-	color_bar_title: `string`
+	color_bar_title : `string`
 		title of the color bar
-	ax_title: `string`
+	ax_title : `string`
 		title of the ax
-	fig_name: `string`
+	fig_name : `string`
 		name of the fig
-	plot_zoa: `bool`
+	plot_zoa : `bool`
 		if true the Zone Of Avaidance is plot
-	write: `bool`
+	write : `bool`
 		if true will save the figure
-	projection: `string`
+	projection : `string`
 		projection used (cf. Healpy)
-	cmap: `string`
+	cmap : `string`
 		color mar used
-	vmin: `float`
+	vmin : `float`
 		minimum value used to plot the map (if -1 take the minimum value of HPmap)
-	vmax: `float`
+	vmax : `float`
 		maximum value used to plot the map (if -1 take the maximum value of HPmap)
 
 
 	Returns
 	-------
 	None
-	"""
+	'''
 
 	# Transform healpix map into matplotlib map (grid_map)
 	xsize = 2048# grid size for matplotlib
@@ -74,7 +74,7 @@ def PlotHPmap(HPmap, nside, galCoord, title, color_bar_title, ax_title, fig_name
 
 	# Set the size of the other fonts
 	fontsize = 15
-	font = {'size'  : fontsize}
+	font = {'size'   : fontsize}
 	plt.rc('font', **font)
 
 	# minimum and maximum values along the z-scale (colorbar)
@@ -202,25 +202,25 @@ def PlotHPmap(HPmap, nside, galCoord, title, color_bar_title, ax_title, fig_name
 
 
 def MapToHealpyCoord(galCoord, l, b):
-	""" Convert RA/DEC or lonGalactic/latGalactic
+	''' Convert RA/DEC or lonGalactic/latGalactic
 	into Healpy coordiantes
 
 	Parameters
 	----------
-	galCoord: `bool`
+	galCoord : `bool`
 		If galCoord = True, load data in Galactic coordinates. Equatorial coordinates otherwise
-	l: `float or numpy array`
+	l : `float or numpy array`
 		Right Ascension or galactic longitude
-	b: `float or numpy array`
+	b : `float or numpy array`
 		Declination or galactic latitude
 
 	Returns
 	-------
-	phi: `float or numpy array`
+	phi : `float or numpy array`
 		Phi healpy coordinates
-	theta: `float or numpy array`
+	theta : `float or numpy array`
 		Theta healpy coordinates
-	"""
+	'''
 
 	theta = np.pi/2-b
 	phi  = l
@@ -231,26 +231,26 @@ def MapToHealpyCoord(galCoord, l, b):
 
 
 def HealpyCoordToMap(galCoord, phi, theta):
-	""" Convert Healpy coordiantes into RA/DEC or
+	''' Convert Healpy coordiantes into RA/DEC or
 	lonGalactic/latGalactic
 
 	Parameters
 	----------
-	galCoord: `bool`
+	galCoord : `bool`
 		If galCoord = True, load data in Galactic coordinates. Equatorial coordinates otherwise
-	phi: `float or numpy array`
+	phi : `float or numpy array`
 		Phi healpy coordinates
-	theta: `float or numpy array`
+	theta : `float or numpy array`
 		Theta healpy coordinates
 
 	Returns
 	-------
-	l: `float or numpy array`
+	l : `float or numpy array`
 		Right Ascension or galactic longitude
-	b: `float or numpy array`
+	b : `float or numpy array`
 		Declination or galactic latitude
 
-	"""
+	'''
 
 	b = np.pi/2 - theta
 	l = phi
@@ -260,38 +260,38 @@ def HealpyCoordToMap(galCoord, phi, theta):
 
 
 def top_hat_beam(radius, nside):
-	""" Top hat smoothing function to be used using healpy smooth function
+	''' Top hat smoothing function to be used using healpy smooth function
 
 	Parameters
 	----------
-	nside: `int`
+	nside : `int`
 		nside parameter for Healpy map
-	radius: `float`
+	radius : `float`
 		radius in radians for smoothing
 
 	Returns
 	-------
 	hp.sphtfunc.beam2bl function
-	"""
+	'''
 	b = np.linspace(0.0,np.pi,10000)
 	bw = np.where(abs(b)<=radius, 1, 0)
 	return hp.sphtfunc.beam2bl(bw, b, lmax=nside*3)#beam in the spherical harmonics space
 
 
 def fisher_beam(radius, nside):
-	""" Fisher smoothing function to be used using healpy smooth function
+	''' Fisher smoothing function to be used using healpy smooth function
 
 	Parameters
 	----------
-	nside: `int`
+	nside : `int`
 		nside parameter for Healpy map
-	radius: `float`
+	radius : `float`
 		radius in radians for smoothing
 
 	Returns
 	-------
 	hp.sphtfunc.beam2bl function
-	"""
+	'''
 	b = np.linspace(0.0,np.pi,10000)
 	bw = np.float128(np.exp(np.float128(np.cos(b)/radius**2)))
 
@@ -299,24 +299,24 @@ def fisher_beam(radius, nside):
 
 
 def LoadSmoothedMap(hp_map, radius_deg, nside, smoothing="fisher"):
-	""" Perform a smoothing on a healpy map
+	''' Perform a smoothing on a healpy map
 
 	Parameters
 	----------
-	hp_map: `numpy array`
+	hp_map : `numpy array`
 		healpy map
-	radius: `float`
+	radius : `float`
 		radius in degree for smoothing
-	nside: `int`
+	nside : `int`
 		nside parameter for Healpy map
-	smoothing: `string`
+	smoothing : `string`
 		Function used: top_hat or fisher
 
 	Returns
 	-------
-	smoothed_map: `numpy array`
+	smoothed_map : `numpy array`
 		Healpy map smoothed
-	"""
+	'''
 	radius = np.radians(radius_deg)
 	if smoothing == "fisher": beam_function = fisher_beam
 	elif smoothing == "top-hat": beam_function = top_hat_beam
@@ -328,32 +328,32 @@ def LoadSmoothedMap(hp_map, radius_deg, nside, smoothing="fisher"):
 
 
 def load_Catalog(galCoord=True, Dmin=1, Dmax=350, tracer="logSFR"):
-	""" Associate each galaxy with a flux
+	''' Associate each galaxy with a flux
 
 	Parameters
 	----------
-	galCoord: `bool`
+	galCoord : `bool`
 		if true load galactic coordinates, if not, load equatorial coordinates
-	Dmin: `float`
+	Dmin : `float`
 		minimum distance of galaxies in Mpc
-	Dmax: `float`
+	Dmax : `float`
 		maximum distance of galaxes in Mpc
-	tracer: `string`
+	tracer : `string`
 		logarithm of the tracer considered (either logSFR or logM* here)
 
 	Returns
 	-------
-	name: `list`
+	name : `list`
 		name of the galaxy
-	dist: `array`
+	dist : `array`
 		distance of the galaxy in Mpc
-	l or ra: `array`
+	l or ra : `array`
 		longitude or right ascension
-	b or dec: `array`
+	b or dec : `array`
 		latitude or declination
-	tracer_of_UHECR: `array`
+	tracer_of_UHECR : `array`
 		value of the SFR (M_solar Mpc^-3 yr^-1) or stellar mass (M_solar Mpc^-3), correction included
-	"""
+	'''
 
 	#Load the catalog
 	file_Catalog = os.path.join(COMBINED_FIT_BASE_DIR,"../Catalog/light_sfr_cleaned_corrected_cloned_LVMHL.dat")
@@ -378,28 +378,28 @@ def load_Catalog(galCoord=True, Dmin=1, Dmax=350, tracer="logSFR"):
 
 
 def load_Map_from_Catalog(galCoord, nside, l, b, weights_galaxies):
-	""" Produce a array that can be plot using HealPy
+	''' Produce a array that can be plot using HealPy
 
 	Parameters
 	----------
-	galCoord: `bool`
+	galCoord : `bool`
 		if true load galactic coordinates, if not, load equatorial coordinates
-	nside: `int`
+	nside : `int`
 		nside parameter for Healpy map
-	l: `float`
+	l : `float`
 		galactic longitude or right ascension in deg
-	b: `float`
+	b : `float`
 		galactic latitude or declination in deg
-	weights_galaxies: `list`
+	weights_galaxies : `list`
 		selected galaxies and associated spectral weights
 
 	Returns
 	-------
-	Rmean: `float`
+	Rmean : `float`
 		mean rigidity above the threshold, useful for smoothing
-	flux_map: `numpy array`
+	flux_map : `numpy array`
 		flux_map in a Healpy format, units are arbitrary
-	"""
+	'''
 
 	# find the pixel for each galaxy
 	phi_gal, theta_gal = MapToHealpyCoord(galCoord, np.radians(l), np.radians(b))
@@ -420,6 +420,32 @@ def load_Map_from_Catalog(galCoord, nside, l, b, weights_galaxies):
 
 
 def sel_gal_behind(galCoord, dist0, l0, b0, dist, l, b, R):
+	''' Take into account the effect of Galaxy clusters on the further galaxies
+
+	Parameters
+	----------
+	galCoord : `bool`
+		if true load galactic coordinates, if not, load equatorial coordinates
+	dist0 : `float`
+		distance of the Cluster
+	l0 : `float`
+		galactic longitude or right ascension in deg of the cluster
+	b0 : `float`
+		galactic latitude or declination in deg of the cluster
+	dist : `list`
+		distances of selected galaxies and associated spectral weights
+	l : `float`
+		galactic longitude or right ascension in deg
+	b : `float`
+		galactic latitude or declination in deg
+	R : `list`
+		distances of the selected agalxies
+
+	Returns
+	-------
+	sel : `list`
+		transparency induced by the cluster to each galaxy
+	'''
 	if galCoord: frame="galactic"
 	else: frame="icrs"
 	c1 = SkyCoord(l0*u.degree, b0*u.degree, frame=frame)
@@ -429,6 +455,28 @@ def sel_gal_behind(galCoord, dist0, l0, b0, dist, l, b, R):
 	return sel
 
 def map_arbitrary_units_all_galaxies(galaxy_parameters, tensor_parameters, k_transient, galCoord, nside):
+	''' Produce a map with all the galaxies
+
+	Parameters
+	----------
+	galaxy_parameters : `list`
+		list of the galaxy
+	tensor_parameters : `float`
+		best-fit parameters
+	k_transient : `float`
+		factor k (burst rate)
+	galCoord : `bool`
+		if true load galactic coordinates, if not, load equatorial coordinates
+	nside : `int`
+		nside parameter for Healpy map
+
+	Returns
+	-------
+	Rmean : `list`
+		mean rigidty for each galaxy
+	map_arbitrary_units : `list`
+		map with arbitrary units
+	'''
 	name, dist, l, b, lum = galaxy_parameters
 	Tensor, E_times_k, A, Z, logRcut, gamma_nucl, gamma_p = tensor_parameters
 	weights_galaxies = []
@@ -456,17 +504,40 @@ def map_arbitrary_units_all_galaxies(galaxy_parameters, tensor_parameters, k_tra
 	return Rmean, map_arbitrary_units
 
 
-def map_arbitrary_units_with_all_cuts(galaxy_parameters, tensor_parameters, k_transient, galCoord, nside):
+def map_arbitrary_units_with_all_cuts(galaxy_parameters, tensor_parameters, k_transient, galCoord, nside, save_weights_galaxies=False):
+	''' Produce a map with all the galaxies (including clusters effects)
 
+	Parameters
+	----------
+	galaxy_parameters : `list`
+		list of the galaxy
+	tensor_parameters : `float`
+		best-fit parameters
+	k_transient : `float`
+		factor k (burst rate)
+	galCoord : `bool`
+		if true load galactic coordinates, if not, load equatorial coordinates
+	nside : `int`
+		nside parameter for Healpy map
+
+	Returns
+	-------
+	Rmean : `list`
+		mean rigidty for each galaxy
+	map_arbitrary_units : `list`
+		map with arbitrary units
+	'''
 	name, dist, l, b, lum = galaxy_parameters
 	Tensor, E_times_k, A, Z, logRcut, gamma_nucl, gamma_p = tensor_parameters
 	weights_galaxies = []
 
 	# select the galaxies behind Virgo
-	dist0, l0, b0, R500, logM500 = utilities.load_virgo_properties(galCoord)
-	sel_Virgo = sel_gal_behind(galCoord, dist0, l0, b0, dist, l, b, 3*R500)
-	sel_NonShadowed = np.invert(sel_Virgo)
-
+	dist0, l0,b0, R500, logM500 = utilities.load_cluster_properties(galCoord)
+	for j,a in enumerate(dist0):
+		sel_cluster = sel_gal_behind(galCoord, dist0[j], l0[j], b0[j], dist, l, b, 3*R500[j])
+		if(j == 0): sel_cluster_tot = sel_cluster
+		sel_cluster_tot = np.logical_or(sel_cluster, sel_cluster_tot)
+	sel_NonShadowed = np.invert(sel_cluster_tot)
 	# bin galaxies by maximum rigidity
 	if k_transient is None: logRcut_galaxies = Tensor[0].logRi[-1]*np.ones_like(dist)#maximum possible rigidity
 	else: logRcut_galaxies = utilities.logRcut_transient(k_transient, dist, lum)
@@ -479,6 +550,7 @@ def map_arbitrary_units_with_all_cuts(galaxy_parameters, tensor_parameters, k_tr
 		ws_R_p.append(lambda Z, logR: sp.Spectrum_Energy(Z, logR, gamma_p, logRcut)*(logR<list_logRmax[i]))
 
 	# load weights for non-shadowed galaxies
+	n_t, l_t, b_t, d_t, w_t = [], [], [], [], []
 	for i, sel_lR in enumerate(sel_logRmax):
 		# select
 		sel = sel_NonShadowed*sel_lR
@@ -493,20 +565,36 @@ def map_arbitrary_units_with_all_cuts(galaxy_parameters, tensor_parameters, k_tr
 			wflux = fweight_d(dist[sel])* lum[sel]/dist[sel]**2
 			weights_galaxies.append([sel, wflux, cum_weighted_R, cum_weights])
 
+#Here output weights for non shadowed galaxies
+			if save_weights_galaxies:
+				n_t += list(name[sel])
+				l_t+= list(l[sel])
+				b_t+= list(b[sel])
+				d_t+= list(dist[sel])
+				w_t+= list(wflux)
+
+	if save_weights_galaxies:
+		table = Table([n_t, l_t, b_t, d_t, w_t] , names = ['name','l','b','d','w'])
+		table['l'].unit = u.deg
+		table['b'].unit = u.deg
+		table['d'].unit = u.Mpc   
+		table.write('weights_galaxies.dat', format='ascii.ecsv', overwrite=True)			
+				
 	# load weights for galaxies behind Virgo
 	for i, sel_lR in enumerate(sel_logRmax):
 		# select
-		sel = sel_Virgo*sel_lR
+		sel = sel_cluster_tot*sel_lR
 		if np.sum(sel)>0:
 			# define the function returning the weights
-			w_R = lambda Z, logR: ws_R[i](Z, logR)*utilities.transparency_cluster(logM500, isProton=False)(logR)
-			w_R_p = lambda Z, logR: ws_R_p[i](Z, logR)*utilities.transparency_cluster(logM500, isProton=True)(logR)
-			logEth, z_tab, weight_z, cum_weighted_R, cum_weights = sp.Compute_single_integrals(Tensor, E_times_k, A, Z, w_R, w_R_p)
-			def fweight_d(d): return interpolate.interp1d(constant._fz_DL(z_tab), weight_z)(d)
+			for j in range(len(logM500)):
+				w_R = lambda Z, logR: ws_R[i](Z, logR)*utilities.transparency_cluster(logM500[j], isProton=False)(logR)
+				w_R_p = lambda Z, logR: ws_R_p[i](Z, logR)*utilities.transparency_cluster(logM500[j], isProton=True)(logR)
+				logEth, z_tab, weight_z, cum_weighted_R, cum_weights = sp.Compute_single_integrals(Tensor, E_times_k, A, Z, w_R, w_R_p)
+				def fweight_d(d): return interpolate.interp1d(constant._fz_DL(z_tab), weight_z)(d)
 
-			#return the selection and flux weights
-			wflux = fweight_d(dist[sel])* lum[sel]/dist[sel]**2
-			weights_galaxies.append([sel, wflux, cum_weighted_R, cum_weights])
+				#return the selection and flux weights
+				wflux = fweight_d(dist[sel])* lum[sel]/dist[sel]**2
+				weights_galaxies.append([sel, wflux, cum_weighted_R, cum_weights])
 
 	# Load anisotropic map
 	Rmean, map_arbitrary_units = load_Map_from_Catalog(galCoord, nside, l, b, weights_galaxies)

@@ -9,10 +9,6 @@ Run a simulation
 It's easy to setup and run a quick simulation: once files are unzipped (./unpack_data.sh)
 it is possible to run one of the following example.
 
-Visualization
-=============
-Including some plots?
-
 Notebooks
 =========
 In the notebook folder we provide three examples:

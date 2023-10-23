@@ -45,8 +45,10 @@ def Plot_spectrum(t, frac, A, Z, w_zR, w_zR_p, E_fit, hadr_model, isE3dJdE= True
     norm, dev = Deviance_spectrum_proton_p(logE, expected_spectrum, experimental_spectrum, spectrum_det, experimental_proton, E_fit, isRenormalized = isRenormalized) # if isRenormalized = True, the overall normalisation minimizing the spectral deviance for fixed fractions can be determined (norm = 1 by default, so that input values keep real units)
     if isRenormalized: print("Normalization factor:",norm)
 
-    draw.Draw_spectrum(		A, logE, expected_spectrum, spectrum_per_inj,	norm, E_fit, hadr_model, isInjected  = True, isE3dJdE= isE3dJdE, isSysDisplayed=False,  saveTitlePlot = "uhecr_spectrum_inj_"+ext_save) # plot the spectra as a function of injected mass
-    draw.Draw_spectrum(		A, logE, expected_spectrum, spectrum_det, 		norm, E_fit, hadr_model, Dev = dev, isInjected  = False, isE3dJdE= isE3dJdE, saveTitlePlot = "uhecr_spectrum_det_"+ext_save) # plot the spectra as a function of detected mass
+    draw.Draw_spectrum(A, logE, expected_spectrum, spectrum_per_inj,	norm, E_fit, hadr_model, isInjected  = True, isE3dJdE= isE3dJdE, isSysDisplayed=False,  saveTitlePlot = "uhecr_spectrum_inj_"+ext_save) # plot the spectra as a function of injected mass
+    draw.Draw_spectrum(A, logE, expected_spectrum, spectrum_det, 		norm, E_fit, hadr_model, Dev = dev, isInjected  = False, isE3dJdE= isE3dJdE, saveTitlePlot = "uhecr_spectrum_det_"+ext_save) # plot the spectra as a function of detected mass
+    t_frac = mass.load_Fractions_Data(hadr_model=hadr_model)#fraction data on Earth
+    draw.Draw_fractions(A, logE, expected_spectrum, spectrum_det, E_fit, t_frac, hadr_model, saveTitlePlot = "uhecr_fractions_det_"+ext_save)
 
 def Compute_expected_spectrum(t, frac, A, Z, w_zR, w_zR_p):
     """ Compute the expected spectrum
@@ -200,19 +202,8 @@ def Deviance_spectrum_proton_p(logE, expected_spectrum, experimental_spectrum, d
     norm: `float`
         normalization of the expected spectrum
     """
-
-    #---------shift -----------#
-    eneshift = 0
-    dEnScale = 0.14
-    shift = 1 + dEnScale * eneshift
-    experimental_spectrum['logE'] = experimental_spectrum['logE'] +np.log10(shift)
-    experimental_spectrum['J'] = experimental_spectrum['J'] * shift * shift
-    experimental_spectrum['J_up'] = experimental_spectrum['J_up'] * shift * shift
-    experimental_spectrum['J_low'] = experimental_spectrum['J_low'] * shift * shift
-    #---------shift -----------#
-
     #Normalization for all-particle and proton spectra
-    StartingFrom = np.ndarray.item((np.argwhere(experimental_spectrum['logE'] == E_fit)))
+    StartingFrom = np.argmax(experimental_spectrum['logE'] >= E_fit)
     MaxE = np.max(experimental_spectrum['logE'])
     interpol_data = interpolate.interp1d(experimental_spectrum['logE'], experimental_spectrum['J'])
     interpolate_model = interpolate.interp1d(logE, expected_spectrum, fill_value="extrapolate")
@@ -307,24 +298,35 @@ def load_Spectrum_Data():
        experimental spectrum as read in 'Data'
 """
     filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Public_data/Spectrum/spectrum_combined.txt')
+    experimental_spectrum = Table.read(filename, format='ascii.basic', delimiter=" ", guess=False)
+    
+    #---------shift -----------#
+    eneshift = 0.
+    dEnScale = 0.14
+    shift = 1 + dEnScale * eneshift
+    experimental_spectrum['logE'] = experimental_spectrum['logE'] +np.log10(shift)
+    experimental_spectrum['J'] = experimental_spectrum['J'] * shift * shift
+    experimental_spectrum['J_up'] = experimental_spectrum['J_up'] * shift * shift
+    experimental_spectrum['J_low'] = experimental_spectrum['J_low'] * shift * shift
+    #---------shift -----------#Minimize_Spectrum_And_Xmax
 
-    return Table.read(filename, format='ascii.basic', delimiter=" ", guess=False)
+    return experimental_spectrum
 
 def load_ProtonSpectrum_Data(hadr_model):
-    """ Upload the experimental spectrum
+    ''' Upload the experimental spectrum
 
     Parameters
     ----------
-    hadr_model: `string`
+    hadr_model : `string`
         hadronic interaction model
 
     Returns
     -------
-    T_J: `table`
+    T_J : `table`
        experimental spectrum as read in 'Data'
-    """
+    '''
     #Load fractions
-    filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Public_data/Composition/composition_fractions_icrc17.txt')
+    filename = os.path.join(COMBINED_FIT_BASE_DIR,'../Public_data/Composition/ICRC2023/composition_fractions_icrc2023.txt')
     t_frac = Table.read(filename, format='ascii.basic', delimiter="\t", guess=False)
 
     #Remove HEAT-based data below 17.8
@@ -335,8 +337,9 @@ def load_ProtonSpectrum_Data(hadr_model):
         print("Hadronic interaction model not valid! ", hadr_model)
         sys.exit(0)
     if hadr_model == "EPOS-LHC": ext = '_EPOS'
-    elif hadr_model == "QGSJET-II04": ext = '_QGS'
     else: ext = '_SIB'
+    #Load fractions
+
 
     keys_in = ['meanLgE', 'p'+ext, 'p_err_low'+ext, 'p_err_up'+ext, 'p_sys_low'+ext, 'p_sys_up'+ext]
     keys_out = ['logE', 'J', 'J_low', 'J_up', 'J_sys_low', 'J_sys_up']

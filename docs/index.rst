@@ -24,7 +24,7 @@ The main components are:
 - tensor.py :
       subclass that handles the reading of the tensor. The tensor is a 4-d matrix which allows to take into account the extra-galactic propagation of the simulated injected fluxes.
 
-- minimizator.py :
+- minimizer.py :
         subclass that handles the minimizator functions.
 
 - spectrum.py :

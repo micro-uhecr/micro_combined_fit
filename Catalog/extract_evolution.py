@@ -79,7 +79,8 @@ def Write_Draw_evolution(evolution, local_dens, annotations=None, deep_field_dat
 
 	#Local density
 	ax0.plot(ld, ldens, color="tab:gray", ls="-.")	
-	ax0.plot(ld[ildmin:], ldens[ildmin:], color="k", label="Full-sky (Biteau '21 - 2MASS/WISE/SCOS)")
+	#ax0.plot(ld[ildmin:], ldens[ildmin:], color="k", label="Full-sky (Biteau '21 - 2MASS/WISE/SCOS)")
+	ax0.plot(ld[:], ldens[:], color="k", label="Full-sky (Biteau '21 - 2MASS/WISE/SCOS)")
 	
 	#Deep field
 	sz, sbounds = deep_field_data
@@ -257,10 +258,9 @@ if __name__ == "__main__":
 	plt.rcParams.update({'font.size': 14,'legend.fontsize': 12})
 	
 	#Plot SFRD
-#	Write_Draw_evolution(sfrd, title_y=title_sfrd, local_dens = local_sfr, annotations = annot_sfr, deep_field_data = deep_field_sfr, ymin = ymin_sfr, ymax = ymin_sfr*1E4, output_write="sfrd")
+	Write_Draw_evolution(sfrd, title_y=title_sfrd, local_dens = local_sfr, annotations = annot_sfr, deep_field_data = deep_field_sfr, ymin = ymin_sfr, ymax = ymin_sfr*1E4, output_write="sfrd")
 
 	#Plot SMD
-	print(np.log10(smd(0)))
-#	Write_Draw_evolution(smd, title_y=title_smd, local_dens = local_sm, annotations = annot_sm, deep_field_data = deep_field_sm, ymin = ymin_sm, ymax = ymin_sm*1E4, output_write="smd")
+	Write_Draw_evolution(smd, title_y=title_smd, local_dens = local_sm, annotations = annot_sm, deep_field_data = deep_field_sm, ymin = ymin_sm, ymax = ymin_sm*1E4, output_write="smd")
 		
 	plt.show()

@@ -14,6 +14,7 @@
 # meta: !!omap
 # - reference_id: 2017ICRC...35..506B
 # - comments: "Data from https://www.auger.org/document-centre-public/download/78-data/4624-xmax-moments-icrc-2017. Formatted by J. Biteau (2023-07)."
+# - graph_title: "Yushkov+ '19"
 # schema: astropy-2.0
 meanLgE Points fXmax statXmax sysXmax_up sysXmax_low fRMS statRMS sysRMS_up sysRMS_low
 17.26   1052   665.16   2.61   9.52   11.14   61.29   3.94   2.79   2.53

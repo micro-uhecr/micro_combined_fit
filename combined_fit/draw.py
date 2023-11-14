@@ -224,7 +224,7 @@ def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys 
 
     #Plot data points w/ stat. uncertainty
     axs[0].errorbar(experimental_xmax["meanLgE"], experimental_xmax["fXmax"], fmt='o',yerr = experimental_xmax["statXmax"], mfc='none', color = 'tab:gray')
-    axs[0].errorbar(experimental_xmax["meanLgE"][MinBinData:], experimental_xmax["fXmax"][MinBinData:],yerr = experimental_xmax["statXmax"][MinBinData:], fmt='o', mfc='none', color = 'k', label = "Fitoussi+ '23")
+    axs[0].errorbar(experimental_xmax["meanLgE"][MinBinData:], experimental_xmax["fXmax"][MinBinData:],yerr = experimental_xmax["statXmax"][MinBinData:], fmt='o', mfc='none', color = 'k', label = experimental_xmax.meta["graph_title"]) #Yushkov+ '19
 
     #Plot bounds w/ stat + sys
     Xmax_upper_stat_sys = experimental_xmax["fXmax"] + np.sqrt(experimental_xmax["statXmax"]**2 + experimental_xmax["sysXmax_up"]**2)

@@ -7,20 +7,23 @@ colors_alt = ['tab:orange', 'xkcd:silver', 'tab:olive', 'xkcd:azure', 'darkblue'
 Masses = ['H','He', 'N', 'Si', 'Fe']
 
 annotations = [#ra, dec, name
-#                [80.894,-69.756,"LMC","u"],#0-1 Mpc
-#                [11.893, -25.292,"NGC253","u"],#NGC0253 #1-10 Mpc
-#                [0.5*(148.89+148.975), 0.5*(69.067+69.682),"M81/82","u"],#NGC3031, NGC3034
-#                [204.25, -29.868,"M83","u"],#NGC5236
-#                [67.705, 64.848, "NGC1569","u"],#NGC1569
-#                [196.359, -49.471,"NGC4945","u"],#NGC4945
-#                [39.148, 59.655, "Maffei 1","l"],#PGC009892
-#                [201.37, -43.017,"Cen A","u"],#NGC5128
-#                [184.74, 47.304, "M106","ll"],#NGC4258
-#                [202.47, 47.234, "M51","u"],#NGC5194
-#                [187.5, 8.9, "Virgo", "u"],#10-350 Mpc
-#                [200.8, -33.3, "Shapley", "u"],# 0.0163  0.1456
-#                [274.7, -62.3, "Laniakea", "u"],# 0.0112  0.0861
-#                [46.3, 40.2, "Perseus-Pisces", "u"]
+#                [266.417,-29.008,"Sgr A*","ll"],#0-1 Mpc
+
+                [23.462,30.660,"Triangulum","u"],#0-1 Mpc
+                [10.685,41.269,"Andromeda","u"],#0-1 Mpc
+
+                [3.723, -39.197,"NGC55","uu"],#NGC055 #1-10 Mpc
+                [11.893, -25.292,"NGC253","uu"],#NGC0253 #1-10 Mpc
+                [67.705, 64.848, "NGC1569","u"],#NGC1569
+
+                [204.25, -29.868,"M83","u"],#NGC5236
+                [201.37, -43.017,"Cen A","u"],#NGC5128
+                [196.359, -49.471,"NGC4945","u"],#NGC4945
+                [39.148, 59.655, "Maffei 1","ll"],#PGC009892
+                [184.74, 47.304, "M106","ll"],#NGC4258
+                [0.5*(148.89+148.975), 0.5*(69.067+69.682),"M81/82","u"],#NGC3031, NGC3034
+                
+                [270., -60., "Laniakea supercluster", "u"]# 0.0112  0.0861
                 ]
 
 _OmegaM = 0.3
@@ -58,7 +61,7 @@ _ft_DL = interpolate.interp1d(_t,_DL)
 
 # Magnetic field
 B_GMF_nG, lc_GMF_kpc, Lmax_GMF_Mpc = 1E3, 0.1, 10E-3
-B_LGMF_nG, lc_LGMF_kpc, Lmax_LGMF_Mpc = 10, 10, 1
+B_LGMF_nG, lc_LGMF_kpc, Lmax_LGMF_Mpc = 10, 10, 2
 B_IGMF_nG, lc_IGMF_kpc, Lmax_IGMF_Mpc = 1E-4, 1E3, 1e10
 B_default = [[B_GMF_nG, lc_GMF_kpc, Lmax_GMF_Mpc],\
             [B_LGMF_nG, lc_LGMF_kpc, Lmax_LGMF_Mpc],\

@@ -224,7 +224,7 @@ def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys 
 
     #Plot data points w/ stat. uncertainty
     axs[0].errorbar(experimental_xmax["meanLgE"], experimental_xmax["fXmax"], fmt='o',yerr = experimental_xmax["statXmax"], mfc='none', color = 'tab:gray')
-    axs[0].errorbar(experimental_xmax["meanLgE"][MinBinData:], experimental_xmax["fXmax"][MinBinData:],yerr = experimental_xmax["statXmax"][MinBinData:], fmt='o', mfc='none', color = 'k', label = experimental_xmax.meta["graph_title"]) #Yushkov+ '19
+    axs[0].errorbar(experimental_xmax["meanLgE"][MinBinData:], experimental_xmax["fXmax"][MinBinData:],yerr = experimental_xmax["statXmax"][MinBinData:], fmt='o', mfc='none', color = 'k', label = "Fitoussi+ '23")
 
     #Plot bounds w/ stat + sys
     Xmax_upper_stat_sys = experimental_xmax["fXmax"] + np.sqrt(experimental_xmax["statXmax"]**2 + experimental_xmax["sysXmax_up"]**2)
@@ -278,7 +278,7 @@ def Draw_Xmax(logE, Xmax, RMS, experimental_xmax, E_fit, model, delta_shift_sys 
     fig.align_ylabels(axs[:])
 
     if saveTitlePlot is not None: MySaveFig(fig, saveTitlePlot)
-    
+
 def Draw_fractions(A, logE, expected_spectrum, spectrum_per_mass, E_fit, t_frac, him_text, lEmin = 17.8, lEmax = 20.2, isSysDisplayed=False, saveTitlePlot=None):
     ''' Plot the expected and the experimental spectrum above the threshold energy
 
@@ -305,7 +305,7 @@ def Draw_fractions(A, logE, expected_spectrum, spectrum_per_mass, E_fit, t_frac,
         '''
 
     #Load model
-    color_mass = [constant.colors[i] for i in [0,1,2,4]] 
+    color_mass = [constant.colors[i] for i in [0,1,2,4]]
     masses = ["p", "He", "N", "Fe"]
     aliases = [r"$A_{\rm det} = 1$", r"$2 \leq A_{\rm det} \leq 4$", r"$5 \leq A_{\rm det} \leq 27$", r"$28 \leq A_{\rm det} \leq 56$"]
     det_spectra_fin, A_det = [], []
@@ -340,7 +340,7 @@ def Draw_fractions(A, logE, expected_spectrum, spectrum_per_mass, E_fit, t_frac,
         frac = det_spectra_fin[i]
         axs[i].plot(logE, frac, color=color_mass[i], linestyle='--')
         l, = axs[i].plot(logE[MinBinNumber:], frac[MinBinNumber:], color=color_mass[i])
-        if i==1: lref=l    
+        if i==1: lref=l
 
     #plot data
     yticks = [0, 0.25, 0.5, 0.75, 1]
@@ -361,5 +361,5 @@ def Draw_fractions(A, logE, expected_spectrum, spectrum_per_mass, E_fit, t_frac,
         lower_stat_sys = t_frac[masses[i]] - np.sqrt(t_frac[masses[i]+"_err_low"]**2 + t_frac[masses[i]+"_sys_low"]**2)
         axs[i].scatter(t_frac["meanLgE"], upper_stat_sys, marker = r'$\ulcorner\urcorner$', color = color_mass[i])
         axs[i].scatter(t_frac["meanLgE"], lower_stat_sys, marker = r'$\llcorner\lrcorner$', color = color_mass[i])
-    
+
     if saveTitlePlot is not None: MySaveFig(fig, saveTitlePlot)

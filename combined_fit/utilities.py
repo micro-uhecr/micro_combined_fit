@@ -53,7 +53,7 @@ def logRcut_transient(k, dist, lum):
 
 def delta_t19_yr(dist, B = constant.B_default):
     """interpolation function"""
-    D = np.logspace(-2, 3)
+    D = np.logspace(-2.5, 3)
     tau = tau19_propa_custom_yr(D, B)
     finterp = interpolate.interp1d(D, tau)
     return finterp(dist)

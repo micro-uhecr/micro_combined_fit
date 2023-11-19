@@ -41,27 +41,24 @@ if __name__ == "__main__":
 	################################# Inputs ##################################
 	###########################################################################
 
-	# Hotspot parameters
-	logEth_map, lHot, bHot = 19.6, 305, 16#Auger hotspot
-	#logEth_map, lHot, bHot = 19.7, 176, 45#TA hotspot
-
-
-	# Threshold energy above which the map is computed and tensor
-	Dmin, Dcut = 0.01, 350#Mpc, minimum and maximum distance of the catalog
-	galCoord = True # galactic coordinates if True, equatorial otherwise
-	ShowMap, SavePlot = True, True#True to save the map
+	# Physical parameters
+	Dmin, Dcut = 0, 350#Mpc, minimum and maximum distance of the catalog
+	logEth_map = 19.6#Threshold energy in [eV] above which the map is computed
+	includeMilkyWay = True#Add the Milky to the catalog or not
 	isSFR = True# True for SFRD, False for SMD
+		
+	#Plot parameters
+	ShowMap, SavePlot = True, False#True to save the map
+	galCoord = True # galactic coordinates if True, equatorial otherwise
 
-	#Best-fit parameters, inferred with Examples/Fit.py
+	# Best-fit parameters, inferred with Examples/Fit.py
 	logRmin = 17.8 #Integrate the injected spectrum from logR_min to get total energy x k
-	Tensor = ts.upload_Tensor(logRmin = logRmin, logEmin = logEth_map)
-
 	A	= [	1,	 4,	14,	28,	56]
 	Z	= [	1,	 2,  7,	14, 26]
 	hadr_model = "Sibyll" #for the record
 	if isSFR:
 		key, trac = "sfrd", "logSFR"#solar mass / (yr.Mpc3), mass/yr
-		k_transient =2E-4# best-case for B_LS = 10 nG
+		k_transient =1E-4# best-case for B_LS = 10 nG
 		text_k = r"$k = "+ draw.latex_float(k_transient) + r"\, M_\odot^{-1}$"
 		logRcut, gamma_nucl, gamma_p =  18.28, -0.36, 2.64
 		E_times_k = [9.06E+45, 6.79E+45, 2.30E+46, 7.11E+45, 1.69E+45]
@@ -76,7 +73,9 @@ if __name__ == "__main__":
 		unit_E_times_k = "erg per solar mass per year"
 		sigma_shift_sys = 1.54
 
-
+	Tensor = ts.upload_Tensor(logRmin = logRmin, logEmin = logEth_map)
+	tensor_parameters = [Tensor, E_times_k, A, Z, logRcut, gamma_nucl, gamma_p]
+	
 	################# Compute the flux map ####################################
 	###########################################################################
 
@@ -86,30 +85,32 @@ if __name__ == "__main__":
 	w_zR_nucl = sp.weight_tensor(S_z, gamma_nucl, logRcut)
 	w_zR_p = sp.weight_tensor(S_z, gamma_p, logRcut)
 
-	S_z_bckgnd_only = lambda z: S_z(z)*(constant._fz_DL(z)>Dcut)
-	w_zR_bckgnd_nucl = sp.weight_tensor(S_z_bckgnd_only, gamma_nucl, logRcut)
-	w_zR_bckgnd_p = sp.weight_tensor(S_z_bckgnd_only, gamma_p, logRcut)
+	Dmin_CF, Dmax_CF = 1, 350
+	S_z_foreground = lambda z: S_z(z)*(constant._fz_DL(z)>=Dmin_CF)*(constant._fz_DL(z)<Dmax_CF)
+	w_zR_foreground_nucl = sp.weight_tensor(S_z_foreground, gamma_nucl, logRcut)
+	w_zR_foreground_p = sp.weight_tensor(S_z_foreground, gamma_p, logRcut)
 
 	# Background and foreground flux
 	logEth, J_total = sp.Compute_integral_spectrum(Tensor, E_times_k, A, Z, w_zR_nucl, w_zR_p)
-	logEth, J_background = sp.Compute_integral_spectrum(Tensor, E_times_k, A, Z, w_zR_bckgnd_nucl, w_zR_bckgnd_p)
-	J_foreground = J_total - J_background
-	print("Fraction of foreground flux:",J_foreground/J_total)
+	logEth, J_foreground = sp.Compute_integral_spectrum(Tensor, E_times_k, A, Z, w_zR_foreground_nucl, w_zR_foreground_p)
+	print("Fraction of foreground flux (1-350 Mpc):",J_foreground/J_total)
 
 	# Get the isotropic background
 	nside = 64
+	J_background = J_total-J_foreground
 	iso_Map = np.ones(hp.nside2npix(nside))*J_background
 
 	####################### Foreground ########################################
+
 	# Get the catalog
-	galaxy_parameters = map.load_Catalog(galCoord, Dmin, Dcut, tracer=trac)
-	tensor_parameters = [Tensor, E_times_k, A, Z, logRcut, gamma_nucl, gamma_p]
+	galaxy_parameters_selected = map.load_Catalog(galCoord, Dmin, Dcut, tracer=trac, includeMilkyWay = includeMilkyWay)
+	galaxy_parameters_foreground = map.load_Catalog(galCoord, Dmin_CF, Dmax_CF, tracer=trac, includeMilkyWay = includeMilkyWay)
 
-	Rmean, map_as_in_spec_compo_fit =  map.map_arbitrary_units_all_galaxies(galaxy_parameters, tensor_parameters, k_transient, galCoord, nside)
+	Rmean_foreground, map_arbitrary_units_foreground = map.map_arbitrary_units_with_all_cuts(galaxy_parameters_foreground, tensor_parameters, k_transient, galCoord, nside)
 
-	Rmean, map_arbitrary_units = map.map_arbitrary_units_with_all_cuts(galaxy_parameters, tensor_parameters, k_transient, galCoord, nside)
+	Rmean, map_arbitrary_units = map.map_arbitrary_units_with_all_cuts(galaxy_parameters_selected, tensor_parameters, k_transient, galCoord, nside)
 
-	aniso_Map = map_arbitrary_units*J_foreground/np.mean(map_as_in_spec_compo_fit)#mean could also be limited to declination range covered by Auger
+	aniso_Map = map_arbitrary_units*J_foreground/np.mean(map_arbitrary_units_foreground)#mean could also be limited to declination range covered by Auger
 
 	####################### Sum ###############################################
 	# Smooth the flux map at physical angular scale

@@ -26,14 +26,15 @@ if __name__ == "__main__":
     logE_th = 18.75 # Compute the all-particle spectral deviance from logE_th
     isSFR = True # Or False for SMD
 
-    #Initial guess
-    sigma_shiftXmax = 1.2
+    #Initial guess    
     if isSFR:
+        sigma_shiftXmax = 1.2
         init_logRcut, init_gamma_nucl, init_gamma_p =  18.28, -0.36, 2.64
         init_E_times_k = [9.1e+45, 6.8e+45, 2.3e+46, 7.1e+45, 1.7e+45]
         bnds_E_times_k = [[1E40, 1E50]]*len(ts.A)
         unit_E_times_k = "erg per solar mass"
     else:
+        sigma_shiftXmax = 1.5
         init_logRcut, init_gamma_nucl, init_gamma_p =  18.41, 0.62, 3.04
         init_E_times_k = [2.28e+36, 2.16e+35, 1.33e+36 , 1.81e+35, 1.76e+35]
         bnds_E_times_k = [[1E30, 1E40]]*len(ts.A)

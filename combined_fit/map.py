@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import astropy.units as u
 import numpy as np
 from scipy import interpolate
-from astropy.table import Table
+from astropy.table import Table, vstack
 from astropy.coordinates import SkyCoord, ICRS, Galactic
 
 from combined_fit import constant, draw, utilities
@@ -161,40 +161,48 @@ def PlotHPmap(HPmap, nside, galCoord, title, color_bar_title, ax_title, fig_name
 		plt.ylabel('Dec.', size=labelsize)
 
 	# Annotations
-	if galCoord==False:
-		for annot in constant.annotations:
+	for annot in constant.annotations:	
+		ra_deg, dec_deg, text, u = annot
+		if galCoord==True:
+			c = SkyCoord(ra=ra_deg, dec=dec_deg, frame='icrs', unit="deg")
+			ra_deg, dec_deg = -c.galactic.l.degree, c.galactic.b.degree
+		else:
+			ra_deg, dec_deg = 180-ra_deg, dec_deg
+		ra_deg = (ra_deg + 180.) % 360. - 180.
 
-			ra_deg, dec_deg, text, u = annot
-			theta_annot, phi_annot = MapToHealpyCoord(galCoord, np.radians(ra_deg), np.radians(dec_deg))
-			npix = hp.nside2npix(nside)
-			ind = hp.ang2pix(nside, phi_annot, theta_annot)
-
-			dx, dy = 0.5, 0.5#deg
-			if(u=="l"):
-				dy=-8*dy
-				dx=-15*dx
-			elif(u=="ll"):
-				dy=-12*dy
-			elif(u=="uu"):
-				dy=5*dy
-				dx=10*dx
-
-			x = np.radians(180.-ra_deg)
-			y = np.radians(dec_deg)
-			plt.plot([x], [y], marker='+', markersize=4, color='gray')
-			x+=np.radians(dx)
-			y+=np.radians(dy)
-			plt.annotate(text, xy=(x, y), xycoords='data', xytext=(x, y), textcoords='data', color='gray', fontsize=14)
-
-		# Local void
-		ra, dec = 294.0, 15.0
-		x = np.radians(180.-ra)
-		y = np.radians(dec)
-		plt.plot([x], [y], marker='o', mfc='none', markersize=4, color='white')
 		dx, dy = 0.5, 0.5#deg
+		if(u=="l"):
+			dy=-8*dy
+			dx=-15*dx
+		elif(u=="ll"):
+			dy=-16*dy
+			dx=-30*dx
+		elif(u=="uu"):
+			dy=5*dy
+			dx=10*dx
+
+		x, y = np.radians(ra_deg), np.radians(dec_deg)
+		plt.plot([x], [y], marker='+', markersize=4, color='gray')
 		x+=np.radians(dx)
 		y+=np.radians(dy)
-		plt.annotate("Local Void", xy=(x,y), xycoords='data', xytext=(x,y), textcoords='data', color='white', fontsize=14)
+		plt.annotate(text, xy=(x, y), xycoords='data', xytext=(x, y), textcoords='data', color='gray', fontsize=14)
+
+	# Local void
+	ra_LV, dec_LV = 294.0, 15.0
+	if galCoord==True:
+		c = SkyCoord(ra=ra_LV, dec=dec_LV, frame='icrs', unit="deg")
+		ra_LV, dec_LV = -c.galactic.l.degree, c.galactic.b.degree
+	else:
+		ra_LV, dec_LV = 180-ra_LV, dec_LV
+	ra_LV = (ra_LV + 180.) % 360. - 180.		
+
+	x, y = np.radians(ra_LV), np.radians(dec_LV)
+	plt.plot([x], [y], marker='o', mfc='none', markersize=4, color='white')
+	dx, dy = -30*0.5, -16*0.5#deg
+	x+=np.radians(dx)
+	y+=np.radians(dy)
+
+	plt.annotate("Local Void", xy=(x,y), xycoords='data', xytext=(x,y), textcoords='data', color='white', fontsize=14)
 
 	plt.grid(True, alpha=0.25)
 
@@ -207,7 +215,7 @@ def MapToHealpyCoord(galCoord, l, b):
 
 	Parameters
 	----------
-	galCoord : `bool`
+	galCoord : `bool`Local Void
 		If galCoord = True, load data in Galactic coordinates. Equatorial coordinates otherwise
 	l : `float or numpy array`
 		Right Ascension or galactic longitude
@@ -327,7 +335,7 @@ def LoadSmoothedMap(hp_map, radius_deg, nside, smoothing="fisher"):
 	return smoothed_map
 
 
-def load_Catalog(galCoord=True, Dmin=1, Dmax=350, tracer="logSFR"):
+def load_Catalog(galCoord=True, Dmin=1, Dmax=350, tracer="logSFR", includeMilkyWay=False):
 	''' Associate each galaxy with a flux
 
 	Parameters
@@ -340,7 +348,8 @@ def load_Catalog(galCoord=True, Dmin=1, Dmax=350, tracer="logSFR"):
 		maximum distance of galaxes in Mpc
 	tracer : `string`
 		logarithm of the tracer considered (either logSFR or logM* here)
-
+	includeMilkyWay : `bool`
+		add the Milky Way to the catalog
 	Returns
 	-------
 	name : `list`
@@ -359,6 +368,17 @@ def load_Catalog(galCoord=True, Dmin=1, Dmax=350, tracer="logSFR"):
 	file_Catalog = os.path.join(COMBINED_FIT_BASE_DIR,"../Catalog/light_sfr_cleaned_corrected_cloned_LVMHL.dat")
 	t = Table.read(file_Catalog, format='ascii.basic', delimiter=" ", guess=False)
 
+	#Milky way: arXiv:1407.1078 M_* = 6.08E10 M_\odot - SFR = 1.65 M_\odot/yr - based on Kroupa -> x0.92 for SM, x0.94 for SFR
+	lMW, bMW, dMW = 359.94, -0.05, 8E-3
+	raMW, decMW = 266.42, -29.01
+	logM_MW = np.log10(6.08E10*0.92)
+	logSFR_MW = np.log10(1.65*0.94)
+	entries = ["Milky Way", lMW, bMW, raMW, decMW, dMW, logM_MW, logSFR_MW, 1, 1]
+	names = ['name', 'glon', 'glat','ra', 'dec', "d", "logM*", "logSFR", "cNs", "cNm"]
+	tMW = Table()
+	for i, e in enumerate(entries): tMW[names[i]]=[e]
+	if includeMilkyWay: t = vstack([t, tMW])
+		
 	#Select those in the distance range
 	choosen_Galaxies = (t['d']<=Dmax)*(t['d']>=Dmin)
 	tsel = t[choosen_Galaxies]

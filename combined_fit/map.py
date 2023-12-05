@@ -598,6 +598,7 @@ def map_arbitrary_units_with_all_cuts(galaxy_parameters, tensor_parameters, k_tr
 		table['l'].unit = u.deg
 		table['b'].unit = u.deg
 		table['d'].unit = u.Mpc   
+		print(np.sum(table['w']))
 		table.write('weights_galaxies.dat', format='ascii.ecsv', overwrite=True)			
 				
 	# load weights for galaxies behind Virgo

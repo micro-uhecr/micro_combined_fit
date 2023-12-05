@@ -130,8 +130,6 @@ if __name__ == "__main__":
 	cA = contrast_hotspot(Flux_map, nside=nside, galCoord=galCoord, lHot = 305, bHot = 16, isAuger=True)#Auger hotspot
 	cTA = contrast_hotspot(Flux_map, nside=nside, galCoord=galCoord, lHot = 176, bHot = 45, isAuger=False)#TA hotspot
 
-	print("B[nG] / k / Contrast_Auger / Contrast_TA", "{:.2e}".format(constant.B_LGMF_nG), "{:.2e}".format(k_transient), np.around(cA, decimals=2), np.around(cTA, decimals=2) ) 
-
 	################################## Plots ##################################
 	###########################################################################
 

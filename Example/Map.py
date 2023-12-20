@@ -48,7 +48,7 @@ if __name__ == "__main__":
 	isSFR = True# True for SFRD, False for SMD
 		
 	#Plot parameters
-	ShowMap, SavePlot = True, False#True to save the map
+	ShowMap, SavePlot = True, True#True to save the map
 	galCoord = True # galactic coordinates if True, equatorial otherwise
 
 	# Best-fit parameters, inferred with Examples/Fit.py
@@ -116,7 +116,7 @@ if __name__ == "__main__":
 	# Smooth the flux map at physical angular scale
 	smooth = "fisher"
 	radius_Rmean = utilities.theta_mean_deg(Rmean) #deg
-	text_deflection = r"$\theta = "+str(np.around(radius_Rmean, decimals = 1))+r"$°"
+	text_deflection = r"$\Theta = "+str(np.around(radius_Rmean, decimals = 1))+r"$°"
 	Flux_map = aniso_Map + iso_Map
 	if radius_Rmean>3:#if smaller than 3deg the smoothing is equivalent to nothing
 		Flux_map = map.LoadSmoothedMap(Flux_map, radius_Rmean, nside, smoothing=smooth)
@@ -138,7 +138,7 @@ if __name__ == "__main__":
 		if galCoord: ax_title = "Galactic coordinates"
 		else: ax_title = "Equatorial coordinates"
 		fig_name = "uhecr_fluxmap_"+str(np.around(logEth, decimals=2))+"_"+key+"_"+str(np.around(constant.B_LGMF_nG, decimals=2))+"_"+str(k_transient)
-		if smooth=="fisher": tex_ang = r"\theta"
+		if smooth=="fisher": tex_ang = r"\Theta"
 		elif smooth=="top-hat": tex_ang = r"\Psi"
 		Eth = np.around(np.power(10,logEth-18)).astype(int)
 		norm_fact_title = 1E3

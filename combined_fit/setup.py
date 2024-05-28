@@ -20,14 +20,16 @@ setup(
         "Operating System :: OS Independent",
         "Programming Language :: Python",
         ],
-    install_requires=["astropy",
+    install_requires=["astropy>=5.3.1",
                       "matplotlib",
                       "numpy",
-                      "pandas",                      
-                      "scipy",
+                      "pandas",
+                      "scipy>=1.5",
                       "iminuit",
                       "jupyterlab",
                       "numba",
                       "zstandard",
-                      "setuptools_scm"]
+                      "setuptools_scm",
+                      "healpy",
+                      "tqdm"]
 )

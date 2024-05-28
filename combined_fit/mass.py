@@ -221,8 +221,9 @@ def reduced_fractions(A_old, frac_old,size):
     '''
 
     #TBD: could likely be fastened
-    A = np.zeros(56)
-    frac = np.zeros((size,56))
+    nA = 56
+    A = np.zeros(nA+1)
+    frac = np.zeros((size,nA+1))#Identified feature
     for j in range (size):
         for i,a in enumerate(A):
             index = int(A_old[i])

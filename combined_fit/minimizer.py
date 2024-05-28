@@ -6,7 +6,7 @@ from combined_fit import spectrum as sp
 from combined_fit import mass
 
 
-@jit
+#@jit
 def Xmax_Minimization(parms, args, w_zR, w_zR_p):
     """ Compute the Xmax minimization
 
@@ -38,7 +38,7 @@ def Xmax_Minimization(parms, args, w_zR, w_zR_p):
     return mass.compute_Xmax_Deviance(logE, XmaxLM, RMSLM, xmax, E_th, sigma_shift_sys)
 
 
-@jit
+#@jit
 def Spectrum_Minimization_p(parms, args, w_zR, w_zR_p, isRealUnits = True):
     """ Performing the minimization of the energy spectrum
 

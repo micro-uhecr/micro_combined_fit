@@ -97,7 +97,7 @@ def Draw_spectrum(A, logE, expected_spectrum, spectrum_per_mass, norm, E_fit, ha
 
     #Plot data points
     if not isInjected:
-        plt.errorbar(plt_Proton_E, plt_Proton_spectrum, yerr=[plt_Proton_Err_low, plt_Proton_Err_up], fmt='s',  mfc='none', color='tab:red', label = r"$p$ ("+hadr_model+", Mayotte+ '23)")
+        plt.errorbar(plt_Proton_E, plt_Proton_spectrum, yerr=[plt_Proton_Err_low, plt_Proton_Err_up], fmt='s',  mfc='none', color='tab:red', label = r"$p$ ("+hadr_model+", Tkachenko+ '23)")
     plt.errorbar(exp_spectrum['logE'], plt_Data_spectrum, yerr=[plt_Data_Err_low, plt_Data_Err_up], fmt='o',  mfc='none', color='gray')
     plt.errorbar(exp_spectrum['logE'][MinBinNumber:], plt_Data_spectrum[MinBinNumber:], yerr=[plt_Data_Err_low[MinBinNumber:], plt_Data_Err_up[MinBinNumber:]], fmt='o',  mfc='none', color='k', label = r"$p + {}^A_Z{X}$ (Auger coll. '21) ")
 
@@ -354,7 +354,7 @@ def Draw_fractions(A, logE, expected_spectrum, spectrum_per_mass, E_fit, t_frac,
         axs[i].set_ylim(-0.1,1.1)
         p = axs[i].errorbar(t_frac['meanLgE'], t_frac[masses[i]], yerr = [t_frac[masses[i]+"_err_low"], t_frac[masses[i]+"_err_up"]], fmt='o',  mfc='none', color=color_mass[i])
         if i==0:
-            axs[0].legend([p, lref], ["Mayotte+ '23", him_text], loc="upper right")
+            axs[0].legend([p, lref], ["Tkachenko+ '23", him_text], loc="upper right")
 
         #Plot bounds w/ stat + sys
         upper_stat_sys = t_frac[masses[i]] + np.sqrt(t_frac[masses[i]+"_err_up"]**2 + t_frac[masses[i]+"_sys_up"]**2)

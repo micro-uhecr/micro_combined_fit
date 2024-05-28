@@ -62,7 +62,7 @@ _ft_DL = interpolate.interp1d(_t,_DL)
 # Magnetic field
 B_GMF_nG, lc_GMF_kpc, Lmax_GMF_Mpc = 1E3, 0.1, 10E-3
 B_LGMF_nG, lc_LGMF_kpc, Lmax_LGMF_Mpc = 10, 10, 2
-B_IGMF_nG, lc_IGMF_kpc, Lmax_IGMF_Mpc = 1E-4, 1E3, 1e10
+B_IGMF_nG, lc_IGMF_kpc, Lmax_IGMF_Mpc = 1E-2, 1E3, 1e10
 B_default = [[B_GMF_nG, lc_GMF_kpc, Lmax_GMF_Mpc],\
             [B_LGMF_nG, lc_LGMF_kpc, Lmax_LGMF_Mpc],\
             [B_IGMF_nG, lc_IGMF_kpc, Lmax_IGMF_Mpc]]
